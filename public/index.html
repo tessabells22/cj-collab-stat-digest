@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Collab Digest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: same system as Collab Status Check. One command column: header, a panel holding group chips and filters, then compact stage-striped rows that expand. Dark by default with a Dark/Light toggle. */
+:root{
+  color-scheme:dark;
+  --ink:#070A16; --deck:#0E1326; --deck-2:#151B33; --line:#232B4A;
+  --text:#E9ECF8; --muted:#8C93B4;
+  --violet:#7C5CFC; --crystal:#5CC8FF; --lume:#3FE0A4; --gold:#E8B85C;
+  --danger:#FF5C7A; --danger-text:#FFC2CE; --orange:#F59E3B;
+  --glow-a:rgba(124,92,252,.22); --glow-b:rgba(92,200,255,.12); --gold-line:rgba(232,184,92,.45);
+  --f-display:"Sora",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"DM Sans",ui-sans-serif,system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+:root[data-mode="light"]{
+  color-scheme:light;
+  --ink:#F4F5FB; --deck:#FFFFFF; --deck-2:#EEF0F8; --line:#DADEEE;
+  --text:#121630; --muted:#5D6488;
+  --violet:#6544F0; --crystal:#1F8FD1; --lume:#12A374; --gold:#A87412;
+  --danger:#D93356; --danger-text:#B4223F; --orange:#C9680A;
+  --glow-a:rgba(124,92,252,.14); --glow-b:rgba(92,200,255,.12); --gold-line:rgba(168,116,18,.4);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+.signin{display:flex;flex-direction:column;gap:12px}
+.signin form{display:flex;flex-wrap:wrap;gap:8px}
+.signin input{flex:1 1 260px;min-width:0;font:12.5px var(--f-mono);color:var(--text);background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.signin .or{font-size:12.5px;color:var(--muted)}
+.signin ol{margin:0;padding-left:20px;color:var(--muted);font-size:13px}
+.signout{appearance:none;background:none;border:0;padding:0;color:var(--muted);font:600 12px var(--f-body);cursor:pointer;text-decoration:underline}
+body{margin:0;background:var(--ink);color:var(--text);font:15px/1.55 var(--f-body);
+  background-image:radial-gradient(900px 420px at 85% -120px,var(--glow-a),transparent 70%),radial-gradient(700px 360px at -10% 0px,var(--glow-b),transparent 70%);
+  background-repeat:no-repeat}
+.wrap{max-width:960px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 64px;display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-direction:column;gap:8px}
+.toprow{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font:600 12px/1 var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.bolt{width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,var(--violet),var(--crystal));display:grid;place-items:center}
+.bolt svg{width:13px;height:13px}
+h1{margin:0;font:700 clamp(28px,5vw,40px)/1.08 var(--f-display);letter-spacing:-.02em;text-wrap:balance}
+h1 em{font-style:normal;background:linear-gradient(90deg,var(--crystal),var(--violet) 55%,var(--lume));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{margin:0;color:var(--muted);max-width:64ch;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+.fresh{display:inline-flex;align-items:center;gap:7px;font:500 12.5px/1 var(--f-mono);color:var(--text)}
+.fresh i{width:7px;height:7px;border-radius:50%;background:var(--lume)}
+.fresh.stale i{background:var(--gold)}
+
+.mode{display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:var(--deck);border:1px solid var(--line)}
+.mode button{appearance:none;border:0;padding:6px 10px;font:600 12px/1 var(--f-body);border-radius:999px;background:transparent;color:var(--muted);display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+.mode button svg{width:13px;height:13px}
+.mode button[aria-pressed="true"]{background:var(--deck-2);color:var(--text)}
+:focus-visible{outline:2px solid var(--violet);outline-offset:2px}
+
+.panel{background:var(--deck);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.lbl{font:600 11px/1 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.tally{display:flex;gap:8px;flex-wrap:wrap}
+.fchip{appearance:none;font:500 13px/1 var(--f-body);padding:8px 12px;border-radius:999px;background:var(--deck-2);border:1px solid var(--line);color:var(--muted);display:inline-flex;align-items:center;gap:7px;cursor:pointer}
+.fchip i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.fchip b{color:var(--text);font-variant-numeric:tabular-nums}
+.fchip.on{border-color:var(--violet);color:var(--text);background:rgba(124,92,252,.14)}
+.fchip.zero{opacity:.55}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tools input,.tools select,.runpick{font:13px var(--f-body);color:var(--text);background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+.tools input{flex:1 1 240px;min-width:0;font-family:var(--f-mono);font-size:12.5px}
+.refresh{appearance:none;display:inline-flex;align-items:center;gap:7px;font:600 13px/1 var(--f-body);border-radius:999px;padding:9px 14px;background:linear-gradient(135deg,var(--violet),#5B3FE0);color:#fff;border:0;cursor:pointer;box-shadow:0 6px 24px rgba(124,92,252,.3)}
+.refresh:hover{filter:brightness(1.1)}.refresh:disabled{opacity:.6;cursor:progress}
+.refresh svg{width:14px;height:14px}.refresh.spin svg{animation:sp .9s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.note.err{border-color:var(--danger);color:var(--danger-text)}
+.note{font-size:13px;padding:10px 12px;border-radius:10px;background:var(--deck-2);border:1px solid var(--line);color:var(--muted)}
+
+.results-wrap{display:flex;flex-direction:column;gap:8px}
+.bar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:10px}
+.bar h2{margin:0;font:600 18px/1.2 var(--f-display)}
+.bar .count{font:500 12px var(--f-mono);color:var(--muted)}
+.colhead{display:grid;grid-template-columns:minmax(0,2.4fr) minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr) 16px;gap:14px;padding:0 14px 0 16px;font:600 10.5px/1 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.results{display:flex;flex-direction:column;gap:6px}
+.row{background:var(--deck);border:1px solid var(--line);border-radius:12px;position:relative;overflow:hidden}
+.row::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--stage,var(--line))}
+.row>summary{list-style:none;display:grid;grid-template-columns:minmax(0,2.4fr) minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr) 16px;gap:8px 14px;align-items:center;padding:11px 14px 11px 16px;cursor:pointer}
+.row>summary::-webkit-details-marker{display:none}
+.row>summary:hover{background:var(--deck-2)}
+.row>summary:focus-visible{outline:2px solid var(--violet);outline-offset:-2px}
+.who,.dl,.lu{display:flex;flex-direction:column;gap:3px;min-width:0}
+.st{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}
+.nm{font:500 13px/1.3 var(--f-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cr,.sub{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dl span:first-child,.lu span:first-child{font-size:13px;font-variant-numeric:tabular-nums}
+.dim{color:var(--muted);font-size:12.5px}
+.pill{font:600 11.5px/1 var(--f-body);padding:6px 10px;border-radius:999px;white-space:nowrap;color:#0B0F1F;background:var(--pc,#c4c4c4);max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:1px;background:transparent}
+.dot.late{background:var(--danger)}.dot.today{background:var(--orange)}
+.chev{width:14px;height:14px;color:var(--muted);transition:transform .15s}
+.row[open] .chev{transform:rotate(90deg)}
+.row[open]>summary{border-bottom:1px solid var(--line)}
+.flags{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px}
+.flag{font:600 11px/1 var(--f-body);padding:5px 8px;border-radius:6px;border:1px solid var(--line);color:var(--muted)}
+.flag.attn{color:var(--violet);border-color:var(--violet);background:rgba(124,92,252,.10)}
+.flag.late{color:var(--danger);border-color:var(--danger)}
+.flag.stuck{color:var(--gold);border-color:var(--gold-line)}
+.flag.new{color:var(--crystal);border-color:var(--crystal)}
+.det{padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px}
+.why{font-size:13.5px;font-weight:500}
+dl{margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 18px}
+dl div{min-width:0}
+dt{font:600 10.5px/1 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+dd{margin:0;font-size:14px;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.upd{background:var(--ink);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.upd .meta{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap}
+.upd .meta b{color:var(--crystal);font-weight:600}
+.upd .body{font-size:13.5px;overflow-wrap:anywhere}
+.open-link{align-self:flex-start;color:var(--crystal);font-weight:600;font-size:13px;text-decoration:none}
+.open-link:hover{text-decoration:underline}
+.more{appearance:none;align-self:center;font:600 13px/1 var(--f-body);border-radius:999px;padding:11px 18px;background:transparent;color:var(--text);border:1px solid var(--line);cursor:pointer;margin-top:6px}
+.more:hover{border-color:var(--muted)}
+.empty{background:var(--deck);border:1px dashed var(--line);border-radius:16px;padding:24px 20px;display:flex;flex-direction:column;gap:6px}
+.empty h3{margin:0;font:600 16px/1.3 var(--f-display)}
+.empty p{margin:0;color:var(--muted);max-width:60ch}
+.seg{display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:var(--ink);border:1px solid var(--line)}
+.seg button{appearance:none;border:0;padding:7px 12px;font:600 12.5px/1 var(--f-body);border-radius:999px;background:transparent;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--deck-2);color:var(--text)}
+.extras{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.xchip{appearance:none;font:500 12.5px/1 var(--f-body);padding:7px 11px;border-radius:999px;border:1px dashed var(--line);background:transparent;color:var(--muted);display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.xchip b{color:var(--text);font-variant-numeric:tabular-nums}
+.xchip.on{border-style:solid;border-color:var(--lume);color:var(--text);background:rgba(63,224,164,.10)}
+.xchip.new i{width:7px;height:7px;border-radius:50%;background:var(--lume)}
+.linkbtn{appearance:none;background:none;border:0;padding:0;color:var(--crystal);font:600 12.5px var(--f-body);cursor:pointer}
+.newdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--lume);margin-right:6px;vertical-align:1px;box-shadow:0 0 0 3px rgba(63,224,164,.18)}
+.flag.seen{color:var(--lume);border-color:var(--lume)}
+.acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.abtn{appearance:none;font:600 12.5px/1 var(--f-body);border-radius:999px;padding:8px 13px;background:transparent;color:var(--text);border:1px solid var(--line);cursor:pointer}
+.abtn:hover{border-color:var(--muted)}
+.abtn.ok{border-color:var(--lume);color:var(--lume)}
+.draft{display:flex;flex-direction:column;gap:8px}
+.draft textarea{width:100%;min-height:130px;resize:vertical;background:var(--ink);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font:13.5px/1.55 var(--f-body)}
+.hint{font-size:12.5px;color:var(--muted)}
+.chead{display:flex;align-items:baseline;gap:10px;margin:10px 2px 2px;font:600 13px/1.2 var(--f-display);color:var(--text)}
+.chead span{font:500 11.5px var(--f-mono);color:var(--muted)}
+.chead:first-child{margin-top:0}
+footer{font-size:12px;color:var(--muted)}
+@media (max-width:640px){
+  .colhead{display:none}
+  .row>summary{grid-template-columns:minmax(0,1fr) minmax(0,auto) 14px;grid-template-areas:"who st chev" "dl lu chev" "fl fl fl";row-gap:8px}
+  .who{grid-area:who}.st{grid-area:st;justify-content:flex-end}.dl{grid-area:dl}.lu{grid-area:lu;text-align:right}.chev{grid-area:chev}.flags{grid-area:fl}
+}
+@media (prefers-reduced-motion:reduce){.chev{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="toprow">
+      <div class="brand"><span class="bolt"><svg viewBox="0 0 24 24" fill="#fff"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></span>ContentJet · CFS Tools</div>
+      <div style="display:flex;align-items:center;gap:12px"><button type="button" class="signout" id="signout" hidden>Sign out</button><a class="signout" href="/guide">Guide</a>
+      <div class="mode" role="group" aria-label="Color mode">
+        <button type="button" id="mDark" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>Dark</button>
+        <button type="button" id="mLight" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Light</button>
+      </div></div>
+    </div>
+    <h1>What needs <span id="who">you</span> on <em>Production</em>?</h1>
+    <p class="lede"><span class="fresh" id="fresh"><i></i><span id="freshText">Connecting to Monday.com…</span></span><span>Live from your own Monday.com account, refreshed every 5 minutes. Finished, handed-off and not-started collabs are left out.</span></p>
+  </header>
+
+  <section class="panel" aria-label="Filters">
+    <div class="toprow">
+      <div class="seg" role="group" aria-label="View"><button type="button" id="vUrg" aria-pressed="true">By urgency</button><button type="button" id="vCli" aria-pressed="false">By client</button></div>
+      <button type="button" class="refresh" id="refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>Refresh</button></div>
+    <div class="tally" id="tabs" role="tablist"></div>
+    <div class="extras" id="extras"></div>
+    <div class="tools">
+      <input id="q" type="search" placeholder="Search all groups: collab, creator or update" aria-label="Search all collabs">
+      <select id="stageSel" aria-label="Filter by stage"><option value="">All stages</option></select>
+      <select id="sortSel" aria-label="Sort">
+        <option value="priority">Most urgent first</option>
+        <option value="deadline">Deadline, soonest</option>
+        <option value="days">Days in stage, longest</option>
+        <option value="recent">Latest update, newest</option>
+      </select>
+    </div>
+    <div class="note" id="note" hidden></div>
+  </section>
+
+  <section class="results-wrap" aria-live="polite">
+    <div class="bar"><h2 id="rtitle">Needs you</h2><span class="count" id="count"></span></div>
+    <div class="colhead" id="colhead" aria-hidden="true"><span>Collab · creator</span><span>Stage</span><span>Deadline</span><span>Last update or comment</span><span></span></div>
+    <div class="results" id="main">
+      <div class="empty"><h3>Loading your collabs</h3><p>Reading the Production board items where you're the CFS. The first load takes a few seconds; refreshes after that are quick.</p></div>
+    </div>
+  </section>
+
+  <footer id="foot">Read-only. Each person sees their own CFS collabs through their own Monday.com connection. Nothing is changed in Monday.</footer>
+</div>
+
+<script>
+const REFRESH_MS=5*60*1000;
+const COL={stage:"color_mm26weve",deadline:"date_mm3rpv64",delays:"formula_mm5exx7",creator:"board_relation_mm57zxnz",cfs:"multiple_person_mm2677g0",
+  days:"formula_mm26np49",stageStart:"date_mm26qbn7"};
+/* sub-stage column per stage */
+const SUB={"Creative Direction":"color_mm26m684","Production":"color_mm265k74","Post-Production":"color_mm266ame","QC - Production":"color_mm26y3mc",
+  "QC - Post-Production":"color_mm57fna8","Client Review":"color_mm26qtzn"};
+const SUB_IDS=Object.values(SUB);
+/* the Monday.com queries live server-side in api/monday.js */
+
+const GROUPS=[
+  {key:"needsYou",label:"Needs you",c:"var(--violet)"},
+  {key:"dueToday",label:"Due today",c:"#F59E3B"},
+  {key:"late",label:"Late",c:"var(--danger)"},
+  {key:"changed",label:"Changed 24h",c:"var(--crystal)"},
+  {key:"waiting",label:"Waiting on client",c:"#9cd326"},
+  {key:"stuck",label:"Stuck 5d+",c:"var(--gold)"},
+  {key:"other",label:"Everything else",c:"var(--muted)"}
+];
+const STAGE_HEX={"Canceled":"#df2f4a","Planning":"#66ccff","Creative Direction":"#ffcb00","Creator Assignment":"#fdab3d","Production":"#9d50dd",
+  "QC - Production":"#784bd1","Post-Production":"#579bfc","QC - Post-Production":"#5a86d6","Client Review":"#9cd326","Revision":"#ff007f","Revisions":"#ff007f",
+  "Upload":"#ff5ac4","On Hold":"#8a8a99","Approved":"#00c875","Completed":"#16a36b","Posting":"#4a8ff0","In Progress":"#fdab3d","Done":"#00c875","Stuck":"#df2f4a"};
+const YOUR_MOVE=/^(pending asset|needs clarification|revisions?|creator reassignment|contracting|product access)$/i;
+const PAGE=25,tz="Asia/Manila";
+const $=id=>document.getElementById(id);
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+let current=null,tab=store.get("cd.tab")||"needsYou",query="",stage="",sort=store.get("cd.sort")||"priority",limit=PAGE;
+let ready=false,me=null,lastAt=0,busy=false,aiOn=false;
+let view=store.get("cd.view")||"urgency",clientTab="all",special=null;
+/* 2. new since last visit: the previous visit's time, fixed for this session */
+let prevVisit=Number(store.get("cd.lastVisit"))||0;
+/* 3. handled marks: id -> {at, stage, sub}; back automatically when the collab changes */
+let handled={};try{handled=JSON.parse(store.get("cd.handled")||"{}")||{}}catch(e){handled={}}
+const updCache=new Map();   /* item id -> {updated_at, updates} so refreshes only re-read changed items */
+$("sortSel").value=sort;
+
+function setMode(m){document.documentElement.dataset.mode=m;$("mDark").setAttribute("aria-pressed",m==="dark");$("mLight").setAttribute("aria-pressed",m==="light");store.set("cd.mode",m)}
+setMode(store.get("cd.mode")||"dark");
+$("mDark").onclick=()=>setMode("dark");$("mLight").onclick=()=>setMode("light");
+
+const norm=s=>String(s||"").trim().toLowerCase();
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function ago(iso){if(!iso)return"";const d=new Date(iso);if(isNaN(d))return"";const m=Math.round((Date.now()-d)/6e4);
+  if(m<1)return"just now";if(m<60)return m+" min ago";const h=Math.round(m/60);if(h<48)return h+" h ago";return Math.round(h/24)+" days ago"}
+function dueDate(s){if(!s)return null;const d=new Date(s.length<=10?s+"T23:59:59+08:00":s);return isNaN(d)?null:d}
+function fmtDue(s){const d=dueDate(s);return d?d.toLocaleDateString("en-US",{timeZone:tz,month:"short",day:"numeric",year:"numeric"}):""}
+function fmtWhen(iso){const d=new Date(iso);return isNaN(d)?"":d.toLocaleDateString("en-US",{timeZone:tz,month:"short",day:"numeric"})}
+const ts=s=>{const d=s?new Date(s):null;return d&&!isNaN(d)?d.getTime():0};
+const oneLine=s=>String(s||"").replace(/\s+/g," ").trim();
+
+/* ---------- Monday → item rows ---------- */
+function clientOf(name){const t=String(name||"").replace(/^[^A-Za-z0-9]+/,"").split("_")[0].trim();return t||"Other"}
+function cv(it,id){const c=(it.column_values||[]).find(x=>x.id===id);if(!c)return"";const v=c.display_value??c.text;return v==null?"":String(v).trim()}
+function latestPost(updates){
+  let best=null;
+  (updates||[]).forEach(u=>{
+    if(!best||ts(u.created_at)>ts(best.created_at))best={...u,isReply:false,replyTo:""};
+    (u.replies||[]).forEach(r=>{if(!best||ts(r.created_at)>ts(best.created_at))best={...r,isReply:true,replyTo:u.creator?.name||""}});
+  });
+  return best;
+}
+/* stage-only exclusions, decided before any updates are read */
+function finishedByColumns(stageName,sub){
+  const st=norm(stageName),sb=norm(sub);
+  return st==="approved"||st==="completed"||sb==="completed"||(st==="client review"&&sb==="posted");
+}
+function buildRow(it,updates){
+  const stageName=cv(it,COL.stage)||"No stage";
+  let sub=SUB[stageName]?cv(it,SUB[stageName]):"";
+  if(sub==="-")sub="";
+  if(!sub){const any=SUB_IDS.map(id=>cv(it,id)).filter(v=>v&&v!=="-");sub=stageName==="Planning"?"":(any[any.length-1]||"")}
+  const creator=cv(it,COL.creator),delays=cv(it,COL.delays).replace(/(\d+)\.\d+/g,"$1");
+  const daysRaw=parseInt(cv(it,COL.days),10),days=isNaN(daysRaw)?null:daysRaw;
+  const deadline=cv(it,COL.deadline),stageStart=cv(it,COL.stageStart);
+  const p=latestPost(updates),meName=norm(me&&me.name);
+  const text=oneLine(p&&p.text_body);
+  const by=p&&p.creator?p.creator.name:"";
+  const mentionsMe=!!(p&&meName&&norm(text).includes("@"+meName)&&norm(by)!==meName);
+  let mention=null;
+  if(meName)(updates||[]).forEach(u=>[u,...(u.replies||[])].forEach(x=>{
+    if(norm(x.creator&&x.creator.name)!==meName&&norm(x.text_body).includes("@"+meName)&&(!mention||ts(x.created_at)>ts(mention.created_at)))mention=x}));
+  const row={id:it.id,name:String(it.name||"").trim(),url:it.url,stage:stageName,subStage:sub,creator,deadline,delays,daysInStage:days,
+    mentionsMe,mentionAt:mention?mention.created_at:"",mentionBy:mention&&mention.creator?mention.creator.name:"",latest:p?{text:text.length>220?text.slice(0,217)+"…":text,by,at:p.created_at,isReply:p.isReply,replyTo:p.replyTo}:{} };
+  /* exclusions that need the posts */
+  const handoff=p&&meName&&norm(by)===meName&&/spark/i.test(text)&&(/post(ed)?\s*link/i.test(text)||/https?:\/\/\S*(tiktok|instagram|youtu)/i.test(text));
+  const notStarted=(stageName==="Planning"||stageName==="Creative Direction")&&!creator&&!p;
+  if(finishedByColumns(stageName,sub)||handoff||notStarted)return null;
+  /* timing */
+  const d=dueDate(deadline),now=Date.now();
+  row.overdue=/late/i.test(delays)||(!!d&&d<now);
+  const m=delays.match(/(\d+)\s*days?\s*late/i);
+  row.daysLate=row.overdue?(m?+m[1]:Math.max(0,Math.floor((now-d)/864e5))):0;
+  const dueToday=!row.overdue&&!!d&&d-now<864e5;
+  row.stageStart=stageStart;
+  const stageMoved=!!stageStart&&now-ts(stageStart+"T00:00:00+08:00")<864e5;
+  const fresh=p&&now-ts(p.created_at)<864e5;
+  const isCR=stageName==="Client Review";
+  row.client=clientOf(row.name);
+  /* group, first match wins */
+  /* In Post-Production a Pending Asset comes from the PP Manager, not the CFS */
+  const ppAsset=stageName==="Post-Production"&&/^pending asset$/i.test(sub);
+  const move=ppAsset?null:[sub,stageName].find(v=>YOUR_MOVE.test(v||""));
+  if(mentionsMe){row.group="needsYou";row.reason=`${by||"Someone"} mentioned you${p.isReply?" in a comment":""}`}
+  else if(move){row.group="needsYou";row.reason=`Your move: ${move}${days!=null?`, ${days}d in stage`:""}`}
+  else if(dueToday&&!isCR){row.group="dueToday";row.reason="Due today: still time to save it"}
+  else if(row.overdue&&!isCR){row.group="late";row.reason=row.daysLate?`${row.daysLate} day${row.daysLate===1?"":"s"} late`:"Less than a day late"}
+  else if(fresh||stageMoved){row.group="changed";row.reason=fresh?`New ${p.isReply?"comment":"update"} from ${by||"someone"} ${ago(p.created_at)}`:`Moved to ${stageName} today`}
+  else if(isCR){row.group="waiting";row.reason=`Waiting on the client${days!=null?` for ${days} day${days===1?"":"s"}`:""}${row.overdue?`, ${row.daysLate}d past deadline`:""}`}
+  else if(days!=null&&days>=5){row.group="stuck";row.reason=ppAsset?`Waiting on the PP Manager for the asset, ${days} days`:`${days} days in ${stageName}${sub?` · ${sub}`:""}`}
+  else{row.group="other";row.reason=ppAsset?"Waiting on the PP Manager for the asset":""}
+  return row;
+}
+
+/* ---------- loading ---------- */
+async function api(path,body){
+  let r;
+  try{r=await fetch(path,{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify(body||{})})}
+  catch(e){throw{code:"server_unavailable"}}
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok)throw data.error||{code:"server_unavailable",message:"HTTP "+r.status};
+  return data;
+}
+async function loadUpdates(list){
+  const need=list.filter(it=>{const c=updCache.get(it.id);return!c||c.updated_at!==it.updated_at}).map(it=>it.id);
+  for(let i=0;i<need.length;i+=50){
+    const p=await api("/api/monday",{op:"updates",ids:need.slice(i,i+50)});
+    (p.items||[]).forEach(x=>updCache.set(String(x.id),{updated_at:x.updated_at,updates:x.updates||[]}));
+  }
+}
+async function handleList(p){
+  me=p.me||me;
+  if(me&&me.name)$("who").textContent=me.name.split(" ")[0];
+  let items=p.items||[];
+  items=items.map(it=>({...it,id:String(it.id)}));
+  /* skip post lookups for collabs already finished by their stage */
+  const active=items.filter(it=>{const s=cv(it,COL.stage);return!finishedByColumns(s,SUB[s]?cv(it,SUB[s]):"")});
+  await loadUpdates(active);
+  const groups=Object.fromEntries(GROUPS.map(g=>[g.key,[]]));
+  let dropped=items.length-active.length;
+  active.forEach(it=>{const row=buildRow(it,(updCache.get(it.id)||{}).updates);if(row)groups[row.group].push(row);else dropped++});
+  current={groups,dropped,note:""};
+  /* forget handled marks for collabs that left the list */
+  const ids=new Set(Object.values(groups).flat().map(r=>r.id));let pruned=false;
+  Object.keys(handled).forEach(id=>{if(!ids.has(id)){delete handled[id];pruned=true}});if(pruned)saveHandled();
+  showNote("");setFresh();render();
+}
+function showNote(t,err){const n=$("note");n.textContent=t;n.className="note"+(err?" err":"");n.hidden=!t}
+function errCopy(e){
+  switch(e&&e.code){
+    case"not_signed_in":return"Sign in with Monday.com to load your collabs.";
+    case"needs_reauth":return"Your Monday.com sign-in expired or was revoked. Sign in again.";
+    case"wrong_account":return"That Monday.com account isn't allowed on this page. Sign in with your work account.";
+    case"rate_limited":return"Monday.com is rate-limiting requests. Showing the last good data; it will retry on the next refresh.";
+    case"server_unavailable":return"Monday.com didn't answer in time. Showing the last good data; it will retry on the next refresh.";
+    case"tool_error":return"Monday.com rejected the request: "+(e.message||"unknown reason");
+    default:return"Couldn't load from Monday.com ("+((e&&e.code)||"unknown")+"). Press Refresh to try again.";
+  }
+}
+const SIGNED_OUT=["not_signed_in","needs_reauth","wrong_account"];
+function onError(e){
+  if(SIGNED_OUT.includes(e&&e.code)){showSignIn(errCopy(e));return}
+  showNote(errCopy(e),true);setFresh();
+}
+/* one fetch path for first load, the 5-minute timer and the Refresh button */
+let lastTry=0;
+async function refresh(manual){
+  if(!ready||busy)return;
+  busy=true;lastTry=Date.now();
+  const b=$("refresh");b.disabled=true;b.classList.add("spin");
+  if(manual||!lastAt)$("freshText").textContent=lastAt?"Refreshing…":"Loading your collabs…";
+  try{
+    await handleList(await api("/api/monday",{op:"list"}));
+    lastAt=Date.now();                     /* stamp only after a successful fresh read */
+    store.set("cd.lastVisit",String(lastAt)); /* next visit compares against now */
+  }catch(e){onError(e)}
+  finally{busy=false;b.disabled=false;b.classList.remove("spin");setFresh()}
+}
+function manualRefresh(){refresh(true)}
+$("refresh").onclick=manualRefresh;
+
+/* ---------- handled marks (3) ---------- */
+/* A mark holds until the main stage moves or someone @mentions you after you marked it.
+   Team chatter, your own posts and sub-stage changes inside the same stage don't bring it back. */
+function markKey(it){return{at:(it.latest&&it.latest.at)||"",stage:it.stage,sub:it.subStage}}
+function backReason(it){
+  const h=handled[it.id];if(!h)return"";
+  if(h.stage!==it.stage)return`moved to ${it.stage}`;
+  const since=ts(h.markedAt)||ts(h.at);
+  if(it.mentionAt&&ts(it.mentionAt)>since)return`${it.mentionBy||"someone"} mentioned you`;
+  return"";
+}
+function isHandled(it){return!!handled[it.id]&&!backReason(it)}
+function saveHandled(){
+  store.set("cd.handled",JSON.stringify(handled));
+}
+function toggleHandled(id){
+  const it=allRows().find(r=>r.id===id);if(!it)return;
+  if(isHandled(it))delete handled[id];else handled[id]={...markKey(it),markedAt:new Date().toISOString()};
+  saveHandled();render();
+}
+/* ---------- new since last visit (2) ---------- */
+function isNew(it){
+  if(!prevVisit)return false;
+  return ts(it.latest&&it.latest.at)>prevVisit||(!!it.stageStart&&ts(it.stageStart+"T00:00:00+08:00")>prevVisit);
+}
+/* ---------- creator message draft (quick win) ---------- */
+function draftMessage(it){
+  const first=(it.creator||"").split(/\s+/)[0]||"there",name=it.name,due=it.deadline?fmtDue(it.deadline):"";
+  const s=`${it.subStage} ${it.stage}`;let msg;
+  if(/Pending Asset|Needs Clarification|Revision/i.test(s))msg=`Hi ${first}! 😊 Thank you so much for your work on ${name}. Our team needs a few changes before we can move forward:\n\n● [add the requested changes here]\n\nCould you send these over${due?` by ${due}`:" as soon as you can"}? Thank you! 🙏`;
+  else if(/Post-Production|QC - Post|Client Review|Upload|Posting/.test(it.stage))msg=`Hi ${first}! 😊 Quick update on ${name}: your videos are now with our team (${it.stage}). We'll reach out right away if we need anything else. Thank you!`;
+  else if(/QC - Production/.test(it.stage))msg=`Hi ${first}! 😊 Thanks for sending your clips for ${name}! Our team is reviewing them now and we'll get back to you shortly.`;
+  else if(/Planning|Creative Direction|Creator Assignment/.test(it.stage))msg=`Hi ${first}! 😊 Thanks so much for joining ${name}! We're finalizing everything on our side and will share the next steps soon.`;
+  else msg=`Hi ${first}! 😊 Just checking in on ${name}${due?` (deadline: ${due})`:""}. How's filming going? Let me know if you need anything from us!`;
+  if(it.overdue&&!/Client Review/.test(it.stage))msg+=`\n\nJust a heads-up that we're now past the${due?` ${due}`:""} deadline, so please send everything over as soon as you can. 🙏`;
+  return msg;
+}
+async function copyText(text,btn,label){
+  try{await navigator.clipboard.writeText(text);btn.textContent="Copied";setTimeout(()=>btn.textContent=label,1500)}
+  catch(e){const ta=btn.closest(".draft").querySelector("textarea");ta.focus();ta.select();btn.textContent="Press Ctrl+C";setTimeout(()=>btn.textContent=label,2500)}
+}
+async function aiRewrite(it,ta,btn,hint){
+  if(!aiOn)return;
+  btn.disabled=true;hint.textContent="Claude is writing…";
+  const u=it.latest||{};
+  try{
+    const {text}=await api("/api/rewrite",{name:it.name,creator:it.creator,stage:it.stage,subStage:it.subStage,deadline:it.deadline,delays:it.delays,
+      latestAt:u.at?fmtWhen(u.at):"",latestText:u.text||"",draft:ta.value});
+    ta.value=text;hint.textContent="Check it before sending.";
+  }catch(e){
+    hint.textContent=(e&&e.message&&e.code!=="internal"&&e.code!=="server_unavailable")?e.message:"Claude couldn't write this one. The template still works.";
+    if(SIGNED_OUT.includes(e&&e.code))showSignIn(errCopy(e));
+  }finally{btn.disabled=false}
+}
+
+/* ---------- view ---------- */
+function items(key){return(current&&current.groups&&current.groups[key])||[]}
+function allRows(){return GROUPS.flatMap(g=>items(g.key))}
+const GROUP_OF=Object.fromEntries(GROUPS.map(g=>[g.key,g]));
+function matches(it){
+  if(stage&&it.stage!==stage)return false;
+  if(!query)return true;
+  return[it.name,it.creator,it.stage,it.subStage,it.reason,it.client,it.latest&&it.latest.text,it.latest&&it.latest.by].join(" ").toLowerCase().includes(query);
+}
+function sorted(list){
+  const a=list.slice(),due=it=>{const d=dueDate(it.deadline);return d?d.getTime():Infinity};
+  if(sort==="deadline")a.sort((x,y)=>due(x)-due(y));
+  else if(sort==="days")a.sort((x,y)=>(y.daysInStage??-1)-(x.daysInStage??-1));
+  else if(sort==="recent")a.sort((x,y)=>ts(y.latest&&y.latest.at)-ts(x.latest&&x.latest.at));
+  else{
+    const gi=Object.fromEntries(GROUPS.map((g,i)=>[g.key,i]));
+    a.sort((x,y)=>(gi[x.group]-gi[y.group])||(y.mentionsMe-x.mentionsMe)||((y.daysLate||0)-(x.daysLate||0))||
+      (x.group==="waiting"?((y.daysInStage??0)-(x.daysInStage??0)):0)||(due(x)-due(y))||((y.daysInStage??0)-(x.daysInStage??0)));
+  }
+  return a;
+}
+function rowHTML(it,showGroup){
+  const hex=STAGE_HEX[it.stage]||"#8C93B4",u=it.latest||{},grp=GROUP_OF[it.group];
+  const d=dueDate(it.deadline),now=Date.now();
+  const timing=it.overdue?"late":(d&&d-now<864e5)?"today":"";
+  const done=isHandled(it),fresh=isNew(it);
+  const flags=[];
+  if(showGroup&&grp)flags.push(`<span class="flag" style="color:${grp.c};border-color:${grp.c}">${esc(grp.label)}</span>`);
+  if(done)flags.push('<span class="flag seen">Handled</span>');
+  const back=!done&&handled[it.id]?backReason(it):"";
+  if(back)flags.push(`<span class="flag attn">Back: ${esc(back)}</span>`);
+  if(it.mentionsMe)flags.push('<span class="flag attn">Mentioned you</span>');
+  if(it.overdue)flags.push(`<span class="flag late">${it.daysLate?it.daysLate+"d late":"<1d late"}</span>`);
+  if(Number(it.daysInStage)>=5)flags.push(`<span class="flag stuck">${esc(it.daysInStage)}d in stage</span>`);
+  if(u.at&&now-ts(u.at)<864e5)flags.push(`<span class="flag new">New ${u.isReply?"comment":"update"}</span>`);
+  const facts=[["Client",it.client],["Days in stage",it.daysInStage==null?"":String(it.daysInStage)],["Delays",it.delays]].filter(x=>x[1]);
+  return `<details class="row" data-id="${esc(it.id)}" style="--stage:${hex}">
+    <summary>
+      <span class="who"><span class="nm" title="${esc(it.name)}">${fresh?'<i class="newdot" title="New since your last visit"></i>':""}<i class="dot ${timing}"></i>${esc(it.name)}</span><span class="cr">${esc(it.creator||"No creator")}</span></span>
+      <span class="st"><span class="pill" style="--pc:${hex}">${esc(it.stage)}</span>${it.subStage?`<span class="sub">${esc(it.subStage)}</span>`:""}</span>
+      <span class="dl">${it.deadline?`<span>${esc(fmtDue(it.deadline))}</span>`:'<span class="dim">No deadline</span>'}${it.delays?`<span class="sub">${esc(it.delays)}</span>`:""}</span>
+      <span class="lu">${u.at?`<span>${esc(ago(u.at))}</span><span class="sub">${esc(u.by||"")}${u.isReply?" · comment":""}</span>`:'<span class="dim">No updates</span>'}</span>
+      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+      ${flags.length?`<span class="flags">${flags.join("")}</span>`:""}
+    </summary>
+    <div class="det">
+      ${it.reason?`<div class="why">${esc(it.reason)}</div>`:""}
+      ${facts.length?`<dl>${facts.map(x=>`<div><dt>${esc(x[0])}</dt><dd>${esc(x[1])}</dd></div>`).join("")}</dl>`:""}
+      ${u.text?`<div class="upd"><div class="meta"><b>${u.isReply?"Latest comment":"Latest update"}</b><span>${esc(u.by||"Someone")}</span><span>${esc(fmtWhen(u.at))} · ${esc(ago(u.at))}</span>${u.isReply&&u.replyTo?`<span>on ${esc(u.replyTo)}'s update</span>`:""}</div><div class="body">${esc(u.text)}</div></div>`:""}
+      <div class="draft" hidden>
+        <label class="lbl" for="draft-${esc(it.id)}">Message to creator (Brkaway)</label>
+        <textarea id="draft-${esc(it.id)}" rows="6"></textarea>
+        <div class="acts"><button type="button" class="abtn" data-act="copy">Copy message</button>${aiOn?'<button type="button" class="abtn" data-act="ai">Rewrite with Claude</button>':""}<span class="hint"></span></div>
+      </div>
+      <div class="acts">
+        <button type="button" class="abtn${done?" ok":""}" data-act="handled">${done?"✓ Handled · undo":"Mark handled"}</button>
+        <button type="button" class="abtn" data-act="draft">Draft message to creator</button>
+        ${it.url?`<a class="open-link" href="${esc(it.url)}" target="_blank" rel="noopener">Open in Monday.com ↗</a>`:""}
+      </div>
+      ${done?'<span class="hint">Hidden until the stage moves or someone @mentions you.</span>':back?`<span class="hint">You marked this handled; it came back because ${esc(back)}. Mark it again if nothing's needed.</span>`:'<span class="hint">Mark handled hides it until the stage moves or someone @mentions you.</span>'}
+    </div>
+  </details>`;
+}
+function wireRows(main){
+  main.querySelectorAll("details.row").forEach(det=>{
+    const it=allRows().find(r=>r.id===det.dataset.id);if(!it)return;
+    const box=det.querySelector(".draft"),ta=box.querySelector("textarea"),hint=box.querySelector(".hint");
+    det.querySelector('[data-act="handled"]').onclick=()=>toggleHandled(it.id);
+    det.querySelector('[data-act="draft"]').onclick=()=>{ta.value=ta.value||draftMessage(it);box.hidden=false;ta.focus()};
+    box.querySelector('[data-act="copy"]').onclick=ev=>copyText(ta.value,ev.currentTarget,"Copy message");
+    const ai=box.querySelector('[data-act="ai"]');if(ai)ai.onclick=()=>aiRewrite(it,ta,ai,hint);
+  });
+}
+function setView(v){view=v;store.set("cd.view",v);$("vUrg").setAttribute("aria-pressed",v==="urgency");$("vCli").setAttribute("aria-pressed",v==="client");limit=PAGE;render()}
+$("vUrg").onclick=()=>setView("urgency");$("vCli").onclick=()=>setView("client");
+function render(){
+  const main=$("main");
+  if(!current)return;
+  const all=allRows(),active=all.filter(it=>!isHandled(it));
+  const handledRows=all.filter(isHandled),newRows=active.filter(isNew);
+  const searching=!!query;
+  /* chips: groups (urgency) or clients */
+  if(view==="urgency"){
+    const counts=Object.fromEntries(GROUPS.map(g=>[g.key,active.filter(r=>r.group===g.key&&(!searching||matches(r))).length]));
+    if(!counts[tab]&&!store.get("cd.tab")){const f=GROUPS.find(g=>counts[g.key]);if(f)tab=f.key}
+    $("tabs").innerHTML=GROUPS.map(g=>{const on=!searching&&!special&&tab===g.key;
+      return `<button class="fchip${on?" on":""}${counts[g.key]?"":" zero"}" role="tab" aria-selected="${on}" data-k="${g.key}"><i style="background:${g.c}"></i>${g.label} <b>${counts[g.key]}</b></button>`}).join("");
+    $("tabs").querySelectorAll(".fchip").forEach(b=>b.onclick=()=>{tab=b.dataset.k;special=null;limit=PAGE;store.set("cd.tab",tab);if(query){query="";$("q").value=""}render()});
+  }else{
+    const byClient={};active.forEach(r=>{if(!searching||matches(r))byClient[r.client]=(byClient[r.client]||0)+1});
+    const names=Object.keys(byClient).sort((a,b)=>byClient[b]-byClient[a]||a.localeCompare(b));
+    if(clientTab!=="all"&&!names.includes(clientTab))clientTab="all";
+    const total=Object.values(byClient).reduce((a,b)=>a+b,0);
+    $("tabs").innerHTML=`<button class="fchip${clientTab==="all"&&!special?" on":""}" data-c="all">All clients <b>${total}</b></button>`+
+      names.map(n=>`<button class="fchip${clientTab===n&&!special?" on":""}" data-c="${esc(n)}">${esc(n)} <b>${byClient[n]}</b></button>`).join("");
+    $("tabs").querySelectorAll(".fchip").forEach(b=>b.onclick=()=>{clientTab=b.dataset.c;special=null;limit=PAGE;render()});
+  }
+  /* extras: new since last visit, handled */
+  const since=prevVisit?new Date(prevVisit).toLocaleString("en-US",{timeZone:tz,month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):"";
+  $("extras").innerHTML=(prevVisit?`<button class="xchip new${special==="new"?" on":""}" data-x="new"><i></i>New since ${esc(since)} <b>${newRows.length}</b></button>`:"")+
+    (handledRows.length||special==="handled"?`<button class="xchip${special==="handled"?" on":""}" data-x="handled">Handled <b>${handledRows.length}</b></button>`:"")+
+    (prevVisit&&newRows.length?`<button class="linkbtn" id="seenAll">Mark all as seen</button>`:"");
+  $("extras").querySelectorAll(".xchip").forEach(b=>b.onclick=()=>{special=special===b.dataset.x?null:b.dataset.x;limit=PAGE;if(query){query="";$("q").value=""}render()});
+  const sa=$("seenAll");if(sa)sa.onclick=()=>{prevVisit=Date.now();if(special==="new")special=null;render()};
+  /* the list */
+  let pool,title,showGroup=true;
+  if(special==="handled"){pool=handledRows;title="Handled, hidden until the stage moves or you're mentioned"}
+  else if(special==="new"){pool=newRows;title="New since your last visit"}
+  else if(searching){pool=active;title="Search results"+(view==="client"?" across clients":" in all groups")}
+  else if(view==="client"){pool=clientTab==="all"?active:active.filter(r=>r.client===clientTab);title=clientTab==="all"?"All clients":clientTab}
+  else{pool=active.filter(r=>r.group===tab);title=(GROUP_OF[tab]||{}).label||"";showGroup=false}
+  const stages=[...new Set(pool.map(r=>r.stage).filter(Boolean))].sort();
+  if(stage&&!stages.includes(stage))stage="";
+  $("stageSel").innerHTML=`<option value="">All stages</option>`+stages.map(x=>`<option${x===stage?" selected":""}>${esc(x)}</option>`).join("");
+  $("rtitle").textContent=title;
+  let list=sorted(pool.filter(matches));
+  const byClientList=view==="client"&&clientTab==="all"&&!special&&!searching;
+  if(byClientList){const cnt={};list.forEach(r=>cnt[r.client]=(cnt[r.client]||0)+1);list=list.slice().sort((a,b)=>(cnt[b.client]-cnt[a.client])||a.client.localeCompare(b.client))}
+  $("count").textContent=list.length+(list.length===1?" collab":" collabs");
+  $("colhead").hidden=!list.length;
+  const openIds=new Set([...main.querySelectorAll("details[open]")].map(d=>d.dataset.id));
+  const drafts={};main.querySelectorAll("details.row").forEach(d=>{const b=d.querySelector(".draft");if(b&&!b.hidden)drafts[d.dataset.id]=b.querySelector("textarea").value});
+  if(!list.length){
+    const msg=special==="handled"?"Nothing marked handled right now.":special==="new"?"Nothing new since your last visit.":(query||stage)?(query?"No collab matches that search.":"Clear the stage filter to see more."):"No collabs here right now.";
+    main.innerHTML=`<div class="empty"><h3>${query||stage?"Nothing matches":"Nothing here"}</h3><p>${msg}</p></div>`;
+  }else{
+    let html="",prev=null;const cnt={};if(byClientList)list.forEach(r=>cnt[r.client]=(cnt[r.client]||0)+1);
+    list.slice(0,limit).forEach(it=>{
+      if(byClientList&&it.client!==prev){html+=`<div class="chead">${esc(it.client)}<span>${cnt[it.client]}</span></div>`;prev=it.client}
+      html+=rowHTML(it,showGroup).replace('<details class="row"',`<details class="row"${openIds.has(it.id)?" open":""}`);
+    });
+    main.innerHTML=html+(list.length>limit?`<button class="more" id="more">Show ${Math.min(PAGE,list.length-limit)} more of ${list.length-limit}</button>`:"");
+    const m=$("more");if(m)m.onclick=()=>{limit+=PAGE;render()};
+    wireRows(main);
+    Object.entries(drafts).forEach(([id,val])=>{const d=main.querySelector(`details.row[data-id="${CSS.escape(id)}"]`);if(!d)return;const b=d.querySelector(".draft");b.hidden=false;b.querySelector("textarea").value=val});
+  }
+  $("foot").textContent=`${active.length} active collabs${handledRows.length?`, ${handledRows.length} marked handled`:""}${current.dropped?`, ${current.dropped} finished, handed off or not started hidden`:""}. Read-only: each person sees their own CFS collabs through their own Monday.com connection.`;
+}
+function setFresh(){
+  const f=$("fresh"),t=$("freshText");
+  if(!lastAt){if(!busy)t.textContent="Connecting to Monday.com…";return}
+  if(busy)return;
+  const d=new Date(lastAt),next=Math.max(0,Math.ceil((lastTry+REFRESH_MS-Date.now())/60000));
+  t.textContent="Updated "+d.toLocaleTimeString("en-US",{timeZone:tz,hour:"numeric",minute:"2-digit"})+" · "+ago(d.toISOString())+(document.hidden?"":` · next in ${next||"<1"} min`);
+  f.classList.toggle("stale",Date.now()-lastAt>2*REFRESH_MS);
+}
+/* every 20 s: update the label, and re-read Monday once 5 minutes have passed (only while the tab is visible) */
+setInterval(()=>{if(!document.hidden&&ready&&Date.now()-lastTry>=REFRESH_MS)refresh(false);else setFresh()},20000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&ready&&Date.now()-lastTry>=REFRESH_MS)refresh(false);else setFresh()});
+let qt;$("q").addEventListener("input",e=>{clearTimeout(qt);qt=setTimeout(()=>{query=e.target.value.trim().toLowerCase();limit=PAGE;render()},120)});
+$("stageSel").onchange=e=>{stage=e.target.value;limit=PAGE;render()};
+$("sortSel").onchange=e=>{sort=e.target.value;store.set("cd.sort",sort);render()};
+
+/* ---------- sign in ---------- */
+let cfg={signedIn:false,oauth:false,ai:false};
+function showSignIn(msg){
+  ready=false;current=null;lastAt=0;
+  $("tabs").innerHTML="";$("extras").innerHTML="";$("count").textContent="";$("colhead").hidden=true;$("signout").hidden=true;
+  $("refresh").disabled=true;$("freshText").textContent="Not signed in";$("who").textContent="you";showNote("");
+  $("main").innerHTML=`<div class="empty signin"><h3>Sign in with your Monday.com account</h3>
+    ${msg?`<p class="note err">${esc(msg)}</p>`:""}
+    <p>The digest reads the Production board items where you're the CFS, using your own Monday.com access. It never changes anything in Monday.</p>
+    ${cfg.oauth?`<a class="refresh" href="/api/auth/login" style="align-self:flex-start;text-decoration:none">Sign in with Monday.com</a><span class="or">or use a personal API token:</span>`:""}
+    <form id="tokForm"><input id="tok" type="password" autocomplete="off" placeholder="Paste your Monday.com API token" aria-label="Monday.com API token" required><button class="refresh" type="submit">Connect</button></form>
+    <ol><li>In Monday.com click your avatar, then <b>Developers</b>.</li><li>Open <b>My access tokens</b>, click <b>Show</b> and copy it.</li><li>Paste it above. It's stored in a secure cookie for this site only.</li></ol>
+  </div>`;
+  $("tokForm").onsubmit=async ev=>{
+    ev.preventDefault();const btn=ev.target.querySelector("button");btn.disabled=true;
+    try{await api("/api/auth/token",{token:$("tok").value});startDigest()}
+    catch(e){showSignIn(e&&e.message?e.message:errCopy(e))}
+  };
+}
+function startDigest(){
+  ready=true;$("signout").hidden=false;$("refresh").disabled=false;
+  $("main").innerHTML=`<div class="empty"><h3>Loading your collabs</h3><p>Reading the Production board items where you're the CFS. The first load takes a few seconds; refreshes after that are quick.</p></div>`;
+  refresh(false);
+}
+$("signout").onclick=async()=>{try{await api("/api/auth/logout")}catch(e){}updCache.clear();showSignIn("")};
+const AUTH_ERR={denied:"Monday.com sign-in was cancelled.",state:"Sign-in expired. Try again.",exchange:"Monday.com sign-in failed. Try again or use an API token.",
+  wrong_account:"That Monday.com account isn't allowed on this page.",oauth_disabled:"Monday.com sign-in isn't set up here. Use an API token."};
+
+(async()=>{
+  const qs=new URLSearchParams(location.search),authErr=qs.get("auth_error");
+  if(authErr)history.replaceState(null,"",location.pathname);
+  try{const r=await fetch("/api/config",{credentials:"same-origin"});cfg=await r.json()}catch(e){}
+  aiOn=!!cfg.ai;
+  if(!cfg.signedIn){showSignIn(authErr?(AUTH_ERR[authErr]||"Sign-in failed."):"");return}
+  startDigest();
+})();
+</script>
+</body>
+</html>

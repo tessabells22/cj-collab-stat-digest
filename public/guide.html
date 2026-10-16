@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Collab Digest Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: same system as Collab Digest. One column: hero with setup progress, then five numbered parts (setup checklist, live demo, group quiz, hidden toggle, fixes) each in a panel. Dark by default with a Dark/Light toggle. */
+:root{
+  color-scheme:dark;
+  --ink:#070A16; --deck:#0E1326; --deck-2:#151B33; --line:#232B4A;
+  --text:#E9ECF8; --muted:#8C93B4;
+  --violet:#7C5CFC; --crystal:#5CC8FF; --lume:#3FE0A4; --gold:#E8B85C;
+  --danger:#FF5C7A; --danger-text:#FFC2CE;
+  --glow-a:rgba(124,92,252,.22); --glow-b:rgba(92,200,255,.12); --gold-line:rgba(232,184,92,.45);
+  --f-display:"Sora",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"DM Sans",ui-sans-serif,system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+:root[data-mode="light"]{
+  color-scheme:light;
+  --ink:#F4F5FB; --deck:#FFFFFF; --deck-2:#EEF0F8; --line:#DADEEE;
+  --text:#121630; --muted:#5D6488;
+  --violet:#6544F0; --crystal:#1F8FD1; --lume:#12A374; --gold:#A87412;
+  --danger:#D93356; --danger-text:#B4223F;
+  --glow-a:rgba(124,92,252,.14); --glow-b:rgba(92,200,255,.12); --gold-line:rgba(168,116,18,.4);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--ink);color:var(--text);font:15px/1.6 var(--f-body);
+  background-image:radial-gradient(900px 420px at 85% -120px,var(--glow-a),transparent 70%),radial-gradient(700px 360px at -10% 0px,var(--glow-b),transparent 70%);background-repeat:no-repeat}
+.wrap{max-width:860px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 72px;display:flex;flex-direction:column;gap:26px}
+:focus-visible{outline:2px solid var(--violet);outline-offset:2px}
+a{color:var(--crystal)}
+.toprow{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font:600 12px/1 var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.bolt{width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,var(--violet),var(--crystal));display:grid;place-items:center}
+.bolt svg{width:13px;height:13px}
+.mode{display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:var(--deck);border:1px solid var(--line)}
+.mode button{appearance:none;border:0;padding:6px 10px;font:600 12px/1 var(--f-body);border-radius:999px;background:transparent;color:var(--muted);cursor:pointer}
+.mode button[aria-pressed="true"]{background:var(--deck-2);color:var(--text)}
+
+header{display:flex;flex-direction:column;gap:12px}
+h1{margin:0;font:700 clamp(28px,5vw,40px)/1.08 var(--f-display);letter-spacing:-.02em;text-wrap:balance}
+h1 em{font-style:normal;background:linear-gradient(90deg,var(--crystal),var(--violet) 55%,var(--lume));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{margin:0;color:var(--muted);max-width:62ch}
+.cta-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn{appearance:none;display:inline-flex;align-items:center;gap:8px;font:600 14px/1 var(--f-body);border-radius:999px;padding:12px 18px;border:1px solid transparent;cursor:pointer;text-decoration:none}
+.btn.primary{background:linear-gradient(135deg,var(--violet),#5B3FE0);color:#fff;box-shadow:0 6px 24px rgba(124,92,252,.35)}
+.btn.ghost{background:transparent;color:var(--text);border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--muted)}
+.btn.sm{padding:8px 13px;font-size:12.5px}
+.progress{display:flex;align-items:center;gap:10px;font:500 12.5px var(--f-mono);color:var(--muted)}
+.bar{width:140px;height:6px;border-radius:999px;background:var(--deck-2);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--violet),var(--lume));transition:width .3s}
+
+nav.jump{display:flex;flex-wrap:wrap;gap:6px}
+nav.jump a{font:500 12.5px/1 var(--f-body);text-decoration:none;color:var(--muted);padding:7px 11px;border-radius:999px;border:1px solid var(--line);background:var(--deck)}
+nav.jump a:hover{color:var(--text);border-color:var(--muted)}
+
+section.part{background:var(--deck);border:1px solid var(--line);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:14px;scroll-margin-top:16px}
+.part-head{display:flex;align-items:baseline;gap:12px}
+.num{font:600 12px/1 var(--f-mono);color:var(--violet);border:1px solid var(--violet);border-radius:6px;padding:4px 6px}
+h2{margin:0;font:600 20px/1.25 var(--f-display);letter-spacing:-.01em}
+.sub{margin:0;color:var(--muted);font-size:14px;max-width:64ch}
+.lbl{font:600 10.5px/1 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+
+/* 1 setup */
+.steps{display:flex;flex-direction:column;gap:8px}
+.step{display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;align-items:start;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--deck-2)}
+.step input{appearance:none;width:22px;height:22px;border-radius:7px;border:2px solid var(--line);margin:2px 0 0;cursor:pointer;display:grid;place-items:center;background:var(--ink)}
+.step input:checked{background:var(--lume);border-color:var(--lume)}
+.step input:checked::after{content:"";width:6px;height:11px;border:solid #0B0F1F;border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.step b{font-weight:600}
+.step p{margin:2px 0 0;color:var(--muted);font-size:13.5px}
+.step.done{opacity:.7}
+.step.done b{text-decoration:line-through;text-decoration-color:var(--muted)}
+.kbd{font:500 12px var(--f-mono);background:var(--ink);border:1px solid var(--line);border-radius:6px;padding:1px 6px;color:var(--text)}
+.newdot-demo{width:22px;height:22px;border-radius:50%;margin-top:2px;background:rgba(63,224,164,.18);box-shadow:inset 0 0 0 7px var(--lume);display:grid;place-items:center;font:600 12px var(--f-body);color:var(--text)}
+.newdot-demo.hand,.newdot-demo.msg,.newdot-demo.cli{box-shadow:none;background:var(--ink);border:1px solid var(--line)}
+.done-note{font-size:13.5px;padding:10px 12px;border-radius:10px;border:1px solid var(--lume);color:var(--text);background:rgba(63,224,164,.08)}
+
+/* 2 demo */
+.example-tag{font:600 10px/1 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--gold);border:1px solid var(--gold-line);border-radius:6px;padding:4px 6px}
+.tally{display:flex;gap:8px;flex-wrap:wrap}
+.fchip{appearance:none;font:500 13px/1 var(--f-body);padding:8px 12px;border-radius:999px;background:var(--deck-2);border:1px solid var(--line);color:var(--muted);display:inline-flex;align-items:center;gap:7px;cursor:pointer}
+.fchip i{width:8px;height:8px;border-radius:50%}
+.fchip b{color:var(--text);font-variant-numeric:tabular-nums}
+.fchip.on{border-color:var(--violet);color:var(--text);background:rgba(124,92,252,.14)}
+.explain{font-size:13.5px;color:var(--muted);padding:10px 12px;border-left:3px solid var(--k,var(--violet));background:var(--deck-2);border-radius:0 10px 10px 0}
+.explain b{color:var(--text)}
+.results{display:flex;flex-direction:column;gap:6px}
+.row{background:var(--ink);border:1px solid var(--line);border-radius:12px;position:relative;overflow:hidden}
+.row::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--stage)}
+.row.hid{opacity:.5;border-style:dashed}
+.row>summary{list-style:none;display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr) 16px;gap:8px 14px;align-items:center;padding:11px 14px 11px 16px;cursor:pointer}
+.row>summary::-webkit-details-marker{display:none}
+.row>summary:hover{background:var(--deck-2)}
+.who,.dl,.lu{display:flex;flex-direction:column;gap:3px;min-width:0}
+.st{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}
+.nm{font:500 13px/1.3 var(--f-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cr,.sm2{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dl span:first-child,.lu span:first-child{font-size:13px}
+.pill{font:600 11.5px/1 var(--f-body);padding:6px 10px;border-radius:999px;white-space:nowrap;color:#0B0F1F;background:var(--pc)}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:1px}
+.dot.late{background:var(--danger)}
+.chev{width:14px;height:14px;color:var(--muted);transition:transform .15s}
+.row[open] .chev{transform:rotate(90deg)}
+.row[open]>summary{border-bottom:1px solid var(--line)}
+.flags{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px}
+.flag{font:600 11px/1 var(--f-body);padding:5px 8px;border-radius:6px;border:1px solid var(--line);color:var(--muted)}
+.flag.attn{color:var(--violet);border-color:var(--violet)}
+.flag.late{color:var(--danger);border-color:var(--danger)}
+.flag.stuck{color:var(--gold);border-color:var(--gold-line)}
+.flag.new{color:var(--crystal);border-color:var(--crystal)}
+.flag.gone{color:var(--muted);border-style:dashed}
+.det{padding:12px 16px 14px;display:flex;flex-direction:column;gap:10px}
+.why{font-size:13.5px;font-weight:500}
+.upd{background:var(--deck);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px}
+.upd .meta{font-size:12px;color:var(--muted);margin-bottom:4px}
+.upd .meta b{color:var(--crystal)}
+.fake-link{font-size:13px;color:var(--crystal);font-weight:600}
+.colhead{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr) 16px;gap:14px;padding:0 14px 0 16px;font:600 10.5px/1 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.toggle{display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;user-select:none}
+.toggle input{appearance:none;width:40px;height:22px;border-radius:999px;background:var(--deck-2);border:1px solid var(--line);position:relative;cursor:pointer;margin:0}
+.toggle input::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--muted);transition:left .15s}
+.toggle input:checked{background:rgba(124,92,252,.3);border-color:var(--violet)}
+.toggle input:checked::after{left:20px;background:var(--violet)}
+
+/* 3 quiz */
+.quiz-card{border:1px solid var(--line);border-radius:14px;background:var(--deck-2);padding:16px;display:flex;flex-direction:column;gap:12px}
+.scenario{font-size:15px}
+.scenario .meta2{display:block;font:500 12px var(--f-mono);color:var(--muted);margin-top:6px}
+.answers{display:flex;flex-wrap:wrap;gap:8px}
+.answers button{appearance:none;font:500 13px/1 var(--f-body);padding:9px 13px;border-radius:999px;border:1px solid var(--line);background:var(--ink);color:var(--text);cursor:pointer}
+.answers button:hover:not(:disabled){border-color:var(--violet)}
+.answers button.right{border-color:var(--lume);background:rgba(63,224,164,.12)}
+.answers button.wrong{border-color:var(--danger);background:rgba(255,92,122,.1)}
+.answers button:disabled{cursor:default}
+.feedback{font-size:13.5px;min-height:1.2em}
+.feedback b{color:var(--text)}
+.quiz-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font:500 12.5px var(--f-mono);color:var(--muted)}
+
+/* 5 fixes */
+.fix-search{font:13px var(--f-body);color:var(--text);background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+.faq{display:flex;flex-direction:column;gap:6px}
+.faq details{border:1px solid var(--line);border-radius:12px;background:var(--deck-2)}
+.faq summary{list-style:none;cursor:pointer;padding:12px 14px;font-weight:600;font-size:14px;display:flex;justify-content:space-between;gap:10px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";color:var(--muted);font-weight:500}
+.faq details[open] summary::after{content:"–"}
+.faq .ans{padding:0 14px 14px;color:var(--muted);font-size:14px}
+.faq .ans b{color:var(--text)}
+footer{font-size:12.5px;color:var(--muted);text-align:center}
+@media (max-width:640px){
+  .colhead{display:none}
+  .row>summary{grid-template-columns:minmax(0,1fr) minmax(0,auto) 14px;grid-template-areas:"who st chev" "dl lu chev" "fl fl fl";row-gap:8px}
+  .who{grid-area:who}.st{grid-area:st;justify-content:flex-end}.dl{grid-area:dl}.lu{grid-area:lu;text-align:right}.chev{grid-area:chev}.flags{grid-area:fl}
+}
+@media (prefers-reduced-motion:reduce){.chev,.bar i,.toggle input::after{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="toprow">
+      <div class="brand"><span class="bolt"><svg viewBox="0 0 24 24" fill="#fff"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></span>ContentJet · CFS Tools</div>
+      <div class="mode" role="group" aria-label="Color mode">
+        <button type="button" id="mDark" aria-pressed="true">Dark</button>
+        <button type="button" id="mLight" aria-pressed="false">Light</button>
+      </div>
+    </div>
+    <h1>Get the most out of <em>Collab Digest</em></h1>
+    <p class="lede">Collab Digest shows every Production board collab where you're the CFS, sorted by what needs you first. No more scrolling the board or opening items one by one. It reads Monday.com live with your own Monday sign-in and refreshes every 5 minutes. It never changes anything in Monday.</p>
+    <div class="cta-row">
+      <a class="btn primary" href="/">Open Collab Digest →</a>
+      <span class="progress"><span id="progText">Setup 0 of 3</span><span class="bar"><i id="progBar"></i></span></span>
+    </div>
+    <nav class="jump" aria-label="Sections">
+      <a href="#setup">1 · Set up</a><a href="#demo">2 · Try the page</a><a href="#quiz">3 · Which group?</a><a href="#hidden">4 · What's hidden</a><a href="#fixes">5 · Fixes</a>
+    </nav>
+  </header>
+
+  <!-- 1 -->
+  <section class="part" id="setup">
+    <div class="part-head"><span class="num">01</span><h2>Set up once, about 5 minutes</h2></div>
+    <p class="sub">Tick each step as you go. Your progress is saved in this browser.</p>
+    <div class="steps" id="steps">
+      <label class="step"><input type="checkbox" id="s1"><span><b>Open Collab Digest and bookmark it</b><p>Use the button at the top of this page.</p></span></label>
+      <label class="step"><input type="checkbox" id="s2"><span><b>Sign in with Monday.com</b><p>Click <span class="kbd">Sign in with Monday.com</span> and approve access with your own Monday account. If that button isn't there, paste a personal API token instead: in Monday click your avatar, then <span class="kbd">Developers → My access tokens</span>, and copy it.</p></span></label>
+      <label class="step"><input type="checkbox" id="s3"><span><b>Check that the title shows your name</b><p>It should read "What needs <i>your first name</i> on Production?". The first load takes a few seconds; refreshes after that are quick.</p></span></label>
+    </div>
+    <div class="done-note" id="doneNote" hidden>All set. Open Collab Digest and start with the <b>Needs you</b> group.</div>
+  </section>
+
+  <!-- 2 -->
+  <section class="part" id="demo">
+    <div class="part-head"><span class="num">02</span><h2>Try the page</h2><span class="example-tag">Example data</span></div>
+    <p class="sub">This is a working copy of the real page with made-up collabs. Click a group chip, then click a row to open it.</p>
+    <div class="steps">
+      <div class="step"><span class="newdot-demo" aria-hidden="true"></span><span><b>New since your last visit</b><p>A green dot marks collabs with a new post or stage move since you last opened the page. The <span class="kbd">New since …</span> chip lists just those.</p></span></div>
+      <div class="step"><span class="newdot-demo hand" aria-hidden="true">✓</span><span><b>Mark handled</b><p>Open a row and press <span class="kbd">Mark handled</span> once you've dealt with it. It stays hidden until the collab moves to a new stage or someone @mentions you, then comes back with a "Back:" tag saying why. Team chatter and your own posts don't bring it back. Your marks are saved in this browser only.</p></span></div>
+      <div class="step"><span class="newdot-demo msg" aria-hidden="true">✉</span><span><b>Draft message to creator</b><p>Opens a ready-to-edit Brkaway message based on the collab's stage, with an optional <span class="kbd">Rewrite with Claude</span>. Copy it and paste into Brkaway.</p></span></div>
+      <div class="step"><span class="newdot-demo cli" aria-hidden="true">≡</span><span><b>By client view</b><p>Switch <span class="kbd">By urgency</span> to <span class="kbd">By client</span> to see collabs grouped by brand, handy when one client's batch slips together.</p></span></div>
+    </div>
+    <div class="tally" id="demoTabs" role="tablist"></div>
+    <div class="explain" id="demoExplain"></div>
+    <div class="colhead" aria-hidden="true"><span>Collab · creator</span><span>Stage</span><span>Deadline</span><span>Last update</span><span></span></div>
+    <div class="results" id="demoRows"></div>
+  </section>
+
+  <!-- 3 -->
+  <section class="part" id="quiz">
+    <div class="part-head"><span class="num">03</span><h2>Which group would it land in?</h2></div>
+    <p class="sub">Each collab sits in exactly one group: the first that applies, in chip order. Test yourself on a few real-world cases.</p>
+    <div class="quiz-card">
+      <div class="scenario" id="qText"></div>
+      <div class="answers" id="qAnswers"></div>
+      <div class="feedback" id="qFeedback" aria-live="polite"></div>
+      <div class="quiz-foot"><span id="qScore"></span><button class="btn ghost sm" id="qNext" type="button">Next case →</button></div>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="part" id="hidden">
+    <div class="part-head"><span class="num">04</span><h2>What the page leaves out</h2></div>
+    <p class="sub">Finished and handed-off work is hidden so the list stays short. Flip the switch to see what would be hidden in the example above, and why.</p>
+    <label class="toggle"><input type="checkbox" id="showHidden"> Show hidden collabs</label>
+    <div class="results" id="hiddenRows"></div>
+    <p class="sub">If a collab you expect is missing, check its stage in Monday first. It may also list someone else as CFS.</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="part" id="fixes">
+    <div class="part-head"><span class="num">05</span><h2>If something's off</h2></div>
+    <input class="fix-search" id="fixQ" type="search" placeholder="Type what you see, e.g. expired, empty, access" aria-label="Search fixes">
+    <div class="faq" id="faq"></div>
+  </section>
+
+  <footer>Questions or ideas for Collab Digest? Message Tessa on Slack.</footer>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* mode */
+function setMode(m){document.documentElement.dataset.mode=m;$("mDark").setAttribute("aria-pressed",m==="dark");$("mLight").setAttribute("aria-pressed",m==="light");store.set("cd.mode",m)}
+setMode(store.get("cd.mode")||"dark");
+$("mDark").onclick=()=>setMode("dark");$("mLight").onclick=()=>setMode("light");
+
+/* 1 setup checklist */
+const stepIds=["s1","s2","s3"];
+function syncSteps(){
+  const n=stepIds.filter(id=>$(id).checked).length;
+  stepIds.forEach(id=>$(id).closest(".step").classList.toggle("done",$(id).checked));
+  $("progText").textContent=n===3?"Setup complete":`Setup ${n} of 3`;
+  $("progBar").style.width=(n/3*100)+"%";
+  $("doneNote").hidden=n!==3;
+}
+stepIds.forEach(id=>{$(id).checked=store.get("guide."+id)==="1";$(id).onchange=()=>{store.set("guide."+id,$(id).checked?"1":"0");syncSteps()}});
+syncSteps();
+
+/* 2 demo */
+const STAGE_HEX={"Creative Direction":"#ffcb00","Production":"#9d50dd","QC - Production":"#784bd1","Post-Production":"#579bfc","QC - Post-Production":"#5a86d6","Client Review":"#9cd326","Approved":"#00c875","Planning":"#66ccff"};
+const GROUPS=[
+  {key:"needsYou",label:"Needs you",c:"var(--violet)",why:"<b>Someone @mentioned you</b> in the newest update or comment, or the collab sits in a sub-stage that's on you: Pending Asset, Needs Clarification, Revision, Creator Reassignment, Contracting or Product Access. One exception: Pending Asset in Post-Production is on the PP Manager, not you. Start here every time."},
+  {key:"dueToday",label:"Due today",c:"#F59E3B",why:"<b>Due today and not with the client.</b> These are the ones you can still save, so they get their own group."},
+  {key:"late",label:"Late",c:"var(--danger)",why:"<b>Past the deadline and not with the client</b>, worst first. Each row shows how many days late."},
+  {key:"changed",label:"Changed 24h",c:"var(--crystal)",why:"<b>Something happened in the last 24 hours:</b> a new update, a new comment on an older update, or a stage change. Client feedback on a Client Review collab lands here too."},
+  {key:"waiting",label:"Waiting on client",c:"#9cd326",why:"<b>In Client Review with nothing new.</b> The ball is with the client, not you. Sorted by how long they've had it, so a weekly chase is quick."},
+  {key:"stuck",label:"Stuck 5d+",c:"var(--gold)",why:"<b>Five or more days in the same stage</b> with nothing above applying. Worth a nudge to the creator or the team."},
+  {key:"other",label:"Everything else",c:"var(--muted)",why:"<b>Active, but nothing needs you right now.</b> Kept here so you can still find any collab with search."}
+];
+const DEMO=[
+  {g:"needsYou",name:"BrandA_App_CLP01_Oct2026_2",creator:"Creator One",stage:"QC - Production",sub:"Pending",due:"Oct 18",ago:"2 h ago",by:"Team member",isReply:true,days:1,flags:["attn","new"],reason:"Team member mentioned you in a comment",text:"@You the creator's clips are missing the hook from the brief, can you ask for a re-shoot of the first 3 seconds?"},
+  {g:"needsYou",name:"BrandB_Holiday_Oct2026_4",creator:"Creator Two",stage:"Post-Production",sub:"Needs Clarification",due:"Oct 20",ago:"1 day ago",by:"Editor",days:3,flags:[],reason:"Your move: Needs Clarification, 3d in stage",text:"Need the creator's preferred music track before we can finish the edit."},
+  {g:"late",name:"BrandC_Scale_Sept2026_7",creator:"Creator Three",stage:"Production",sub:"Video Production",due:"Oct 12",delays:"2 days late",ago:"3 days ago",by:"Creator Three",days:6,flags:["late","stuck"],late:true,reason:"2 days late",text:"Filming this weekend, will upload Monday."},
+  {g:"changed",name:"BrandD_UGC_Oct2026_1",creator:"Creator Four",stage:"Client Review",sub:"Submitted",due:"Oct 22",ago:"5 h ago",by:"Account manager",days:0,flags:["new"],reason:"Moved to Client Review today",text:"Sent V1 to the client for review."},
+  {g:"waiting",name:"BrandE_Launch_Aug2026_3",creator:"Creator Five",stage:"Client Review",sub:"Submitted",due:"Oct 30",ago:"9 days ago",by:"Account manager",days:12,flags:["stuck"],reason:"Waiting on the client for 12 days",text:"Following up with the client on feedback."},
+  {g:"dueToday",name:"BrandK_Flash_Oct2026_3",creator:"Creator Ten",stage:"Post-Production",sub:"In Progress",due:"Today",ago:"4 h ago",by:"Editor",days:2,flags:[],reason:"Due today: still time to save it",text:"Final edit almost done, exporting this afternoon."},
+  {g:"stuck",name:"BrandL_Promo_Sept2026_8",creator:"Creator Eleven",stage:"QC - Production",sub:"On Hold",due:"Oct 28",ago:"6 days ago",by:"QA lead",days:7,flags:["stuck"],reason:"7 days in QC - Production · On Hold",text:"Holding until the product sample arrives."},
+  {g:"other",name:"BrandF_Evergreen_Oct2026_5",creator:"Creator Six",stage:"Creative Direction",sub:"Creative Instructions",due:"Nov 4",ago:"2 days ago",by:"Strategist",days:2,flags:[],reason:"",text:"Brief is ready, assigning creator this week."}
+];
+const HIDDEN=[
+  {name:"BrandG_Spring_Sept2026_2",creator:"Creator Seven",stage:"Approved",sub:"",due:"Oct 3",ago:"1 day ago",by:"Client lead",why:"Approved: finished work"},
+  {name:"BrandH_Promo_Sept2026_6",creator:"Creator Eight",stage:"Client Review",sub:"Posted",due:"Oct 8",ago:"4 days ago",by:"Account manager",why:"Client Review · Posted: already live"},
+  {name:"BrandI_Scale_Oct2026_1",creator:"Creator Nine",stage:"Client Review",sub:"Submitted",due:"Oct 15",ago:"6 h ago",by:"You",why:"Your latest post shares the post link and spark code: handed off"},
+  {name:"BrandJ_Q4_Oct2026_9",creator:"",stage:"Planning",sub:"",due:"",ago:"",by:"",why:"Planning with no creator and no updates: not started"}
+];
+const FLAG={attn:'<span class="flag attn">Mentioned you</span>',late:'<span class="flag late">2d late</span>',new:'<span class="flag new">New update</span>'};
+const chev='<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>';
+function rowHTML(r,opts={}){
+  const hex=STAGE_HEX[r.stage]||"#8C93B4";
+  const flags=(r.flags||[]).map(f=>f==="stuck"?`<span class="flag stuck">${r.days}d in stage</span>`:f==="new"&&r.isReply?'<span class="flag new">New comment</span>':FLAG[f]).join("")+(opts.hiddenWhy?`<span class="flag gone">Hidden: ${esc(opts.hiddenWhy)}</span>`:"");
+  return `<details class="row${opts.hiddenWhy?" hid":""}" style="--stage:${hex}"><summary>
+    <span class="who"><span class="nm"><i class="dot ${r.late?"late":""}"></i>${esc(r.name)}</span><span class="cr">${esc(r.creator||"No creator")}</span></span>
+    <span class="st"><span class="pill" style="--pc:${hex}">${esc(r.stage)}</span>${r.sub?`<span class="sm2">${esc(r.sub)}</span>`:""}</span>
+    <span class="dl">${r.due?`<span>${esc(r.due)}</span>`:'<span class="sm2">No deadline</span>'}${r.delays?`<span class="sm2">${esc(r.delays)}</span>`:""}</span>
+    <span class="lu">${r.ago?`<span>${esc(r.ago)}</span><span class="sm2">${esc(r.by)}${r.isReply?" · comment":""}</span>`:'<span class="sm2">No updates</span>'}</span>
+    ${chev}${flags?`<span class="flags">${flags}</span>`:""}</summary>
+    <div class="det">${r.reason?`<div class="why">${esc(r.reason)}</div>`:""}${opts.hiddenWhy?`<div class="why">${esc(opts.hiddenWhy)}</div>`:""}
+      ${r.text?`<div class="upd"><div class="meta"><b>${r.isReply?"Latest comment":"Latest update"}</b> · ${esc(r.by)} · ${esc(r.ago)}</div>${esc(r.text)}</div>`:""}
+      <span class="fake-link">Open in Monday.com ↗ <span class="sm2">(on the real page)</span></span></div></details>`;
+}
+let demoTab="needsYou";
+function renderDemo(){
+  $("demoTabs").innerHTML=GROUPS.map(g=>`<button class="fchip${demoTab===g.key?" on":""}" role="tab" aria-selected="${demoTab===g.key}" data-k="${g.key}"><i style="background:${g.c}"></i>${g.label} <b>${DEMO.filter(d=>d.g===g.key).length}</b></button>`).join("");
+  $("demoTabs").querySelectorAll(".fchip").forEach(b=>b.onclick=()=>{demoTab=b.dataset.k;renderDemo()});
+  const g=GROUPS.find(x=>x.key===demoTab);
+  $("demoExplain").style.setProperty("--k",g.c);$("demoExplain").innerHTML=g.why;
+  $("demoRows").innerHTML=DEMO.filter(d=>d.g===demoTab).map(r=>rowHTML(r)).join("");
+  const first=$("demoRows").querySelector("details");if(first&&demoTab==="needsYou"&&!renderDemo.opened){first.open=true;renderDemo.opened=true}
+}
+renderDemo();
+
+/* 3 quiz */
+const QUIZ=[
+  {t:"A teammate @mentions you in a comment on a collab that is also 3 days past its deadline.",m:"Client Review · Submitted · due 3 days ago",a:"needsYou",why:"Needs you comes first. A mention beats overdue, so it shows in Needs you (and still gets the Overdue tag)."},
+  {t:"A collab has been in Client Review · Submitted for 9 days. No new posts, deadline is next week.",m:"9 days in stage · due next week",a:"waiting",why:"It's with the client and nothing changed today, so it goes to Waiting on client, not Stuck. The ball isn't in your court."},
+  {t:"A Production collab is 4 days past its deadline. Last post was a week ago.",m:"Production · Video Production · 4 days late",a:"late",why:"Not with the client and past the deadline, so it lands in Late, sorted near the top because it's 4 days over."},
+  {t:"Your collab's sub-stage is Pending Asset while it's still in Production. The deadline is in two weeks.",m:"Production · Pending Asset",a:"needsYou",why:"In Production, Pending Asset means you need to get the asset from the creator, so it lands in Needs you."},
+  {t:"A collab in Post-Production shows Pending Asset. It's been 6 days, no new posts, deadline next week.",m:"Post-Production · Pending Asset · 6 days in stage",a:"stuck",why:"In Post-Production the asset comes from the PP Manager, not the CFS, so it doesn't count as your move. With 6 days in the stage it lands in Stuck."},
+  {t:"The editor replied to an older update an hour ago. The collab is due next week and moved stage 2 days ago.",m:"Reply 1 h ago · 2 days in stage",a:"changed",why:"A comment counts as the latest post. A new post in the last 24 hours puts it in Changed 24h."},
+  {t:"The client approved the final cut. Stage is now Approved.",m:"Approved",a:"hidden",why:"Approved is finished work, so the page hides it. You won't see it in any group."},
+  {t:"Your latest post on the collab shares the TikTok post link and the spark code.",m:"Client Review · Submitted",a:"hidden",why:"That's your hand-off post, so the page treats the collab as done and hides it."}
+];
+const QOPTS=[...GROUPS.slice(0,6).map(g=>({key:g.key,label:g.label})),{key:"hidden",label:"Hidden"}];
+let qi=0,score=0,answered=0;
+function renderQ(){
+  const q=QUIZ[qi];
+  $("qText").innerHTML=`${esc(q.t)}<span class="meta2">${esc(q.m)}</span>`;
+  $("qAnswers").innerHTML=QOPTS.map(o=>`<button type="button" data-k="${o.key}">${o.label}</button>`).join("");
+  $("qFeedback").textContent="";
+  $("qNext").textContent=qi===QUIZ.length-1?"Start over":"Next case →";
+  $("qScore").textContent=`Case ${qi+1} of ${QUIZ.length}${answered?` · ${score}/${answered} right`:""}`;
+  $("qAnswers").querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    const ok=b.dataset.k===q.a;
+    answered++;if(ok)score++;
+    $("qAnswers").querySelectorAll("button").forEach(x=>{x.disabled=true;if(x.dataset.k===q.a)x.classList.add("right")});
+    if(!ok)b.classList.add("wrong");
+    $("qFeedback").innerHTML=`<b>${ok?"Right.":"Not quite."}</b> ${esc(q.why)}`;
+    $("qScore").textContent=`Case ${qi+1} of ${QUIZ.length} · ${score}/${answered} right`;
+  });
+}
+$("qNext").onclick=()=>{if(qi===QUIZ.length-1){qi=0;score=0;answered=0}else qi++;renderQ()};
+renderQ();
+
+/* 4 hidden */
+function renderHidden(){
+  const on=$("showHidden").checked;
+  $("hiddenRows").innerHTML=on?HIDDEN.map(r=>rowHTML(r,{hiddenWhy:r.why})).join(""):"";
+}
+$("showHidden").onchange=renderHidden;renderHidden();
+
+/* 5 fixes */
+const FAQ=[
+  {q:"\"Sign in with your Monday.com account\"",a:"You're signed out on this browser. Sign in with Monday.com, or paste your personal API token (avatar → <b>Developers → My access tokens</b>).",k:"sign in signed out login connect setup"},
+  {q:"\"Your Monday.com sign-in expired or was revoked\"",a:"Sign in again. This happens if you regenerated your API token or removed the app's access in Monday.",k:"expired reauth reconnect revoked"},
+  {q:"\"That Monday.com account isn't allowed on this page\"",a:"You signed in with a personal or other-company Monday account. Sign out of Monday in this browser, then sign in with your work account.",k:"wrong account not allowed access denied blocked"},
+  {q:"\"Monday.com didn't answer in time\"",a:"Nothing to do. The last good data stays on screen and the next refresh tries again.",k:"timeout slow didn't answer error rate limit"},
+  {q:"The list is empty, or the title shows someone else's name",a:"You're signed in with someone else's Monday account or token. Press <b>Sign out</b> at the top and sign in with your own.",k:"empty wrong name nothing no collabs"},
+  {q:"Rewrite with Claude is missing",a:"It only shows when the site has Claude set up. The message template and Copy button still work without it.",k:"claude rewrite ai missing"},
+  {q:"A collab I expect is missing",a:"Check its stage in Monday: Approved, Completed, Client Review · Posted and handed-off collabs are hidden. Also check that you're listed as its CFS.",k:"missing not showing hidden where"},
+  {q:"How fresh is the data?",a:"The page refreshes every 5 minutes while open. The time next to the green dot is the last update; press <b>Refresh</b> for an instant update. An amber dot means it hasn't refreshed in over 10 minutes.",k:"refresh fresh update time stale amber"}
+];
+function renderFaq(){
+  const q=$("fixQ").value.trim().toLowerCase();
+  const list=FAQ.filter(f=>!q||(f.q+" "+f.a+" "+f.k).toLowerCase().includes(q));
+  $("faq").innerHTML=list.length?list.map((f,i)=>`<details${q&&i===0?" open":""}><summary>${esc(f.q)}</summary><div class="ans">${f.a}</div></details>`).join(""):'<p class="sub">No match. Message Tessa on Slack with what you see.</p>';
+}
+$("fixQ").addEventListener("input",renderFaq);renderFaq();
+</script>
+</body>
+</html>
