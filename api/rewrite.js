@@ -1,7 +1,7 @@
 // "Rewrite with Claude": turns the template draft into a warm message for the creator.
-// Only signed-in Monday.com users (from ALLOWED_MONDAY_ACCOUNT_ID, when set) can call it, so the API key isn't open to the internet.
+// Only people signed in with a company Google account can call it, so the API key isn't open to the internet.
 import Anthropic from "@anthropic-ai/sdk";
-import { json, requireToken, whoAmI, errorResponse, aiEnabled } from "./_lib.js";
+import { json, requireSession, errorResponse, aiEnabled } from "./_lib.js";
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-5-5";
 const client = aiEnabled() ? new Anthropic() : null;
@@ -17,7 +17,7 @@ const clip = (v, n) => String(v ?? "").slice(0, n);
 export async function POST(request) {
   if (!client) return json({ error: { code: "ai_disabled", message: "Claude isn't set up on this deployment." } }, 404);
   try {
-    await whoAmI(requireToken(request));
+    requireSession(request);
     let b;
     try { b = await request.json(); } catch { b = {}; }
     const prompt =

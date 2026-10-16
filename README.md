@@ -2,34 +2,46 @@
 
 The Collab Digest page and its guide, packaged to run on Vercel instead of claude.ai.
 
-- `public/index.html` is the digest (`/`)
+- `public/index.html` is the digest (`/`), behind a "Continue with Google" sign-in
 - `public/guide.html` is the guide (`/guide`)
-- `api/` holds the serverless functions that replace the claude.ai runtime:
-  - `api/monday.js` reads the Production board with the signed-in person's own Monday.com token. The queries are fixed server-side and nothing writes to Monday.
-  - `api/auth/*` signs people in (Monday.com OAuth, or a pasted personal API token). The token lives in an HttpOnly cookie, never in page scripts.
+- `api/` holds the serverless functions:
+  - `api/auth/*` handles Google sign-in, limited to one Workspace domain (`ALLOWED_EMAIL_DOMAIN`). The session is a signed, HttpOnly cookie that lasts 30 days.
+  - `api/monday.js` reads the Production board with one server-side Monday.com token. It looks up the Monday user whose email matches the Google login and only returns collabs where that person is the CFS. The queries are fixed server-side and nothing writes to Monday.
   - `api/rewrite.js` powers "Rewrite with Claude" (optional).
 
 ## Deploy
 
-1. Import this repo in Vercel (Framework preset: **Other**, no build command). `vercel.json` already points output at `public/`.
-2. Add environment variables (Project → Settings → Environment Variables). All are optional; see `.env.example`:
-   - `ALLOWED_MONDAY_ACCOUNT_ID`: recommended. Only people in your Monday account can sign in and use Claude. Find the id by running `query { me { account { id } } }` in Monday's API playground.
-   - `ANTHROPIC_API_KEY`: turns on "Rewrite with Claude". Without it the button is hidden and the template still works.
-   - `MONDAY_CLIENT_ID` / `MONDAY_CLIENT_SECRET`: turns on "Sign in with Monday.com". Without them, people paste a personal API token.
-3. Deploy, then open the URL.
+### 1. Google sign-in (Google Cloud Console, signed in with your contentjet.io account)
 
-### Setting up "Sign in with Monday.com" (optional, nicer for a team)
+1. Go to console.cloud.google.com and create a project (e.g. "Collab Digest").
+2. **APIs & Services → OAuth consent screen**: choose **Internal**. That limits sign-in to your Workspace at Google's end too. Fill in the app name and support email.
+3. **APIs & Services → Credentials → Create credentials → OAuth client ID**:
+   - Application type: **Web application**
+   - Authorized redirect URI: `https://<your-vercel-domain>/api/auth/callback`
+4. Copy the Client ID and Client secret.
 
-1. In Monday.com: avatar → Developers → Create app.
-2. Under OAuth, add the scopes `me:read`, `boards:read`, `updates:read` and the redirect URL `https://<your-domain>/api/auth/callback`.
-3. Copy the Client ID and Client Secret into Vercel, then redeploy.
-4. Depending on your Monday plan, an admin may need to approve or install the app for the account.
+### 2. Monday.com token
+
+The server reads Monday with one token. Use an account that can see the Production board, ideally one that won't leave the company (a shared ops account is better than a person's). In Monday: avatar → Developers → My access tokens → copy.
+
+Everyone's Monday.com email must match their Google email, since that's how the page finds "your" collabs.
+
+### 3. Vercel
+
+1. Import this repo (Framework preset: **Other**, no build command). `vercel.json` points output at `public/`.
+2. Add environment variables (Settings → Environment Variables), see `.env.example`:
+   - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+   - `ALLOWED_EMAIL_DOMAIN` = `contentjet.io`
+   - `SESSION_SECRET`: a long random string (`openssl rand -base64 32`)
+   - `MONDAY_API_TOKEN`
+   - `ANTHROPIC_API_KEY` (optional): turns on "Rewrite with Claude"
+3. Deploy. If anything is missing, the sign-in page lists which variables to add.
 
 ## Differences from the claude.ai version
 
-- **Sign-in:** each person signs in with their own Monday.com account instead of the claude.ai connector. Same result: everyone sees only their own CFS collabs.
+- **Sign-in** is company Google, not the claude.ai Monday connector. Monday is read with one shared token, and the server filters to the signed-in person's collabs.
 - **Handled marks** are saved per browser (localStorage). The claude.ai version also synced them across devices; bringing that back needs a database such as Upstash Redis.
-- **Rewrite with Claude** calls the Anthropic API with your key, so it's billed to that key. Only signed-in Monday users can call it (and only your account, when `ALLOWED_MONDAY_ACCOUNT_ID` is set).
+- **Rewrite with Claude** calls the Anthropic API with your key, so it's billed to that key. Only signed-in company accounts can call it.
 
 ## Local development
 

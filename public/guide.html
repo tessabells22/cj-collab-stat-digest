@@ -174,7 +174,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
       </div>
     </div>
     <h1>Get the most out of <em>Collab Digest</em></h1>
-    <p class="lede">Collab Digest shows every Production board collab where you're the CFS, sorted by what needs you first. No more scrolling the board or opening items one by one. It reads Monday.com live with your own Monday sign-in and refreshes every 5 minutes. It never changes anything in Monday.</p>
+    <p class="lede">Collab Digest shows every Production board collab where you're the CFS, sorted by what needs you first. No more scrolling the board or opening items one by one. It reads Monday.com live after you sign in with your company Google account and refreshes every 5 minutes. It never changes anything in Monday.</p>
     <div class="cta-row">
       <a class="btn primary" href="/">Open Collab Digest →</a>
       <span class="progress"><span id="progText">Setup 0 of 3</span><span class="bar"><i id="progBar"></i></span></span>
@@ -190,7 +190,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
     <p class="sub">Tick each step as you go. Your progress is saved in this browser.</p>
     <div class="steps" id="steps">
       <label class="step"><input type="checkbox" id="s1"><span><b>Open Collab Digest and bookmark it</b><p>Use the button at the top of this page.</p></span></label>
-      <label class="step"><input type="checkbox" id="s2"><span><b>Sign in with Monday.com</b><p>Click <span class="kbd">Sign in with Monday.com</span> and approve access with your own Monday account. If that button isn't there, paste a personal API token instead: in Monday click your avatar, then <span class="kbd">Developers → My access tokens</span>, and copy it.</p></span></label>
+      <label class="step"><input type="checkbox" id="s2"><span><b>Continue with Google</b><p>Use your <span class="kbd">@contentjet.io</span> Google account. Personal Gmail accounts are blocked.</p></span></label>
       <label class="step"><input type="checkbox" id="s3"><span><b>Check that the title shows your name</b><p>It should read "What needs <i>your first name</i> on Production?". The first load takes a few seconds; refreshes after that are quick.</p></span></label>
     </div>
     <div class="done-note" id="doneNote" hidden>All set. Open Collab Digest and start with the <b>Needs you</b> group.</div>
@@ -359,11 +359,11 @@ $("showHidden").onchange=renderHidden;renderHidden();
 
 /* 5 fixes */
 const FAQ=[
-  {q:"\"Sign in with your Monday.com account\"",a:"You're signed out on this browser. Sign in with Monday.com, or paste your personal API token (avatar → <b>Developers → My access tokens</b>).",k:"sign in signed out login connect setup"},
-  {q:"\"Your Monday.com sign-in expired or was revoked\"",a:"Sign in again. This happens if you regenerated your API token or removed the app's access in Monday.",k:"expired reauth reconnect revoked"},
-  {q:"\"That Monday.com account isn't allowed on this page\"",a:"You signed in with a personal or other-company Monday account. Sign out of Monday in this browser, then sign in with your work account.",k:"wrong account not allowed access denied blocked"},
+  {q:"\"Sign in to Collab Digest\" keeps showing",a:"Click <b>Continue with Google</b> and pick your @contentjet.io account. If you picked a personal Gmail, you'll see a message saying so; try again with your work account.",k:"sign in signed out login google gmail setup"},
+  {q:"\"Your Google email doesn't match a Monday.com user\"",a:"Your Monday.com account uses a different email from your Google login. Message Tessa so she can match them up.",k:"no monday user email match missing account"},
+  {q:"\"The site's Monday.com connection stopped working\"",a:"Nothing you can fix yourself. Message Tessa; the site's Monday token needs updating.",k:"connection token stopped broken monday"},
   {q:"\"Monday.com didn't answer in time\"",a:"Nothing to do. The last good data stays on screen and the next refresh tries again.",k:"timeout slow didn't answer error rate limit"},
-  {q:"The list is empty, or the title shows someone else's name",a:"You're signed in with someone else's Monday account or token. Press <b>Sign out</b> at the top and sign in with your own.",k:"empty wrong name nothing no collabs"},
+  {q:"The list is empty",a:"Check that you're listed in the CFS column on the Production board in Monday. The page only shows collabs where you are the CFS.",k:"empty nothing no collabs"},
   {q:"Rewrite with Claude is missing",a:"It only shows when the site has Claude set up. The message template and Copy button still work without it.",k:"claude rewrite ai missing"},
   {q:"A collab I expect is missing",a:"Check its stage in Monday: Approved, Completed, Client Review · Posted and handed-off collabs are hidden. Also check that you're listed as its CFS.",k:"missing not showing hidden where"},
   {q:"How fresh is the data?",a:"The page refreshes every 5 minutes while open. The time next to the green dot is the last update; press <b>Refresh</b> for an instant update. An amber dot means it hasn't refreshed in over 10 minutes.",k:"refresh fresh update time stale amber"}
