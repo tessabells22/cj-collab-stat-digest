@@ -119,7 +119,7 @@ export async function mondayUser(email) {
   const key = email.toLowerCase();
   const hit = userCache.get(key);
   if (hit && hit.at > Date.now() - 36e5) return hit.user;
-  const data = await monday("query($e:[String]){ users(emails:$e){ id name email } }", { e: [email] });
+  const data = await monday("query($e:[String!]){ users(emails:$e){ id name email } }", { e: [email] });
   const user = (data.users || []).find((u) => String(u.email || "").toLowerCase() === key);
   if (!user) throw new AppError("no_monday_user", `No Monday.com user has the email ${email}.`, 403);
   userCache.set(key, { user, at: Date.now() });
