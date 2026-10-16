@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Weekly KPIs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/app.css">
+<style>
+/* Weekly KPIs: same system as the digest. Header, week picker, a KPI row of stat tiles,
+   two single-series weekly column charts, then pipeline / client review / clients panels. */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.tile{background:var(--deck);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.tile .k{font:600 10.5px/1.2 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.tile .v{font:600 30px/1.1 var(--f-body);font-variant-numeric:tabular-nums}
+.tile .d{font-size:12.5px;color:var(--muted)}
+.tile .d b{font-weight:600}
+.up{color:var(--lume)}.down{color:var(--danger)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:12px}
+.card{background:var(--deck);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card h2{margin:0;font:600 15px/1.3 var(--f-display)}
+.card .hint{margin:0}
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart .grid line{stroke:var(--line);stroke-width:1}
+.chart .axis text{fill:var(--muted);font:11px var(--f-body)}
+.chart .cap{fill:var(--text);font:600 11.5px var(--f-body)}
+.chart .bar{fill:var(--violet)}
+.chart .bar.other{opacity:.45}
+.chart .hit{fill:transparent;cursor:default}
+.chart .hit:focus{outline:none}
+.chart .hit:focus-visible{stroke:var(--violet);stroke-width:2}
+.tip{position:absolute;pointer-events:none;background:var(--deck-2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12.5px;white-space:nowrap;box-shadow:0 6px 20px rgba(0,0,0,.25);transform:translate(-50%,-100%);z-index:2}
+.tip b{display:block;font-weight:600}
+details.tbl summary{cursor:pointer;font-size:12.5px;color:var(--crystal);font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+th{text-align:left;font:600 10.5px/1.2 var(--f-display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+td.n,th.n{text-align:right}
+tr:last-child td{border-bottom:0}
+.hbars{display:flex;flex-direction:column;gap:8px}
+.hb{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr) auto;gap:10px;align-items:center;font-size:13px}
+.hb .sn{display:flex;align-items:center;gap:7px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hb .sn i{width:8px;height:8px;border-radius:50%;flex:none}
+.hb .track{height:10px;border-radius:999px;background:var(--deck-2);overflow:hidden}
+.hb .fill{height:100%;border-radius:999px;background:var(--violet)}
+.hb .val{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12.5px;white-space:nowrap}
+.hb .val b{color:var(--text);font-weight:600}
+.weekpick{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.weekpick select{font:13px var(--f-body);color:var(--text);background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+td a{color:var(--crystal);text-decoration:none}
+td a:hover{text-decoration:underline}
+@media (max-width:640px){.hb{grid-template-columns:minmax(0,110px) minmax(0,1fr) auto}.tile .v{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="gate" id="gate" hidden>
+  <div class="brand"><span class="bolt"><svg viewBox="0 0 24 24" fill="#fff"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></span>ContentJet · CFS Tools</div>
+  <div class="gate-card">
+    <h1>Sign in to Weekly KPIs</h1>
+    <p>Use your <b id="gateDomain">company</b> Google account.</p>
+    <a class="gbtn" href="/api/auth/login"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.2-2.1 3.5-5.1 3.5-8.8z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6h-4a12 12 0 0 0 0 10.8l4-3.1z"/><path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1c.9-2.9 3.6-4.9 6.7-4.9z"/></svg>Continue with Google</a>
+  </div>
+  <div class="note err" id="gateErr" hidden></div>
+  <p class="gate-foot">Internal ContentJet tool. Access is limited to company Google Workspace accounts.</p>
+</div>
+
+<div class="wrap" id="app" hidden>
+  <header>
+    <div class="toprow">
+      <div class="brand"><span class="bolt"><svg viewBox="0 0 24 24" fill="#fff"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></span>ContentJet · CFS Tools</div>
+      <div style="display:flex;align-items:center;gap:12px"><button type="button" class="signout" id="signout">Sign out</button><a class="signout" href="/">Digest</a><a class="signout" href="/guide">Guide</a>
+      <div class="mode" role="group" aria-label="Color mode">
+        <button type="button" id="mDark" aria-pressed="true">Dark</button>
+        <button type="button" id="mLight" aria-pressed="false">Light</button>
+      </div></div>
+    </div>
+    <h1><span id="who">Your</span> week on <em>Production</em></h1>
+    <p class="lede"><span class="fresh" id="fresh"><i></i><span id="freshText">Loading…</span></span><span>Your collabs as CFS, live from Monday.com. Weeks run Monday to Sunday, Manila time.</span></p>
+  </header>
+
+  <section class="panel" aria-label="Week">
+    <div class="toprow">
+      <label class="weekpick"><span class="lbl">Week</span><select id="weekSel" aria-label="Week"></select></label>
+      <button type="button" class="refresh" id="refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>Refresh</button>
+    </div>
+    <div class="note" id="note" hidden></div>
+  </section>
+
+  <section class="kpis" id="tiles" aria-label="Key numbers"></section>
+
+  <section class="grid2">
+    <div class="card"><h2>Delivered per week</h2><p class="hint">Collabs that reached Approved or Completed, last 8 weeks.</p><div class="chart" id="chThru"></div>
+      <details class="tbl"><summary>Show as table</summary><div id="tbThru"></div></details></div>
+    <div class="card"><h2>On-time rate per week</h2><p class="hint">Share of that week's deliveries finished on or before their deadline.</p><div class="chart" id="chOnTime"></div>
+      <details class="tbl"><summary>Show as table</summary><div id="tbOnTime"></div></details></div>
+  </section>
+
+  <section class="grid2">
+    <div class="card"><h2>Pipeline by stage</h2><p class="hint">Active collabs now, with average days in their current stage.</p><div class="hbars" id="pipeline"></div></div>
+    <div class="card"><h2>Waiting on client review</h2><p class="hint">In Client Review now, by client. Longest waits first.</p><div id="crw"></div></div>
+  </section>
+
+  <section class="grid2">
+    <div class="card"><h2>Oldest in stage</h2><p class="hint">Active collabs that have sat longest in their current stage.</p><div id="oldest"></div></div>
+    <div class="card"><h2>Delivered this week by client</h2><p class="hint" id="byClientHint"></p><div id="byClient"></div></div>
+  </section>
+
+  <footer id="foot">"Delivered" means the collab reached Approved or Completed; its date is the day it entered that stage, so a collab approved one week and completed the next counts in the later week. Collabs without a deadline are left out of the on-time rate.</footer>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const tz="Asia/Manila",DAY=864e5;
+const COL={stage:"color_mm26weve",deadline:"date_mm3rpv64",creator:"board_relation_mm57zxnz",days:"formula_mm26np49",stageStart:"date_mm26qbn7",crSub:"color_mm26qtzn"};
+const FINISHED=new Set(["Approved","Completed"]);
+const STAGE_ORDER=["Planning","Creative Direction","Creator Assignment","Production","QC - Production","Post-Production","QC - Post-Production","Upload","Client Review","Posting","Revision","Revisions","On Hold"];
+const STAGE_HEX={"Planning":"#66ccff","Creative Direction":"#ffcb00","Creator Assignment":"#fdab3d","Production":"#9d50dd","QC - Production":"#784bd1","Post-Production":"#579bfc",
+  "QC - Post-Production":"#5a86d6","Client Review":"#9cd326","Revision":"#ff007f","Revisions":"#ff007f","Upload":"#ff5ac4","On Hold":"#8a8a99","Posting":"#4a8ff0"};
+
+function setMode(m){document.documentElement.dataset.mode=m;$("mDark").setAttribute("aria-pressed",m==="dark");$("mLight").setAttribute("aria-pressed",m==="light");store.set("cd.mode",m)}
+setMode(store.get("cd.mode")||"dark");
+$("mDark").onclick=()=>setMode("dark");$("mLight").onclick=()=>setMode("light");
+
+/* ---------- dates: everything as Manila calendar days, weeks start Monday ---------- */
+const todayStr=()=>new Intl.DateTimeFormat("en-CA",{timeZone:tz}).format(new Date()); /* YYYY-MM-DD */
+const dayNum=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s||"");return m?Date.UTC(+m[1],m[2]-1,+m[3])/DAY:null};
+const weekStart=n=>n-((new Date(n*DAY).getUTCDay()+6)%7);
+const fmtDay=n=>new Date(n*DAY).toLocaleDateString("en-US",{timeZone:"UTC",month:"short",day:"numeric"});
+const weekLabel=w=>`${fmtDay(w)} – ${fmtDay(w+6)}`;
+const shortWeek=w=>fmtDay(w);
+
+/* ---------- Monday → rows ---------- */
+function cv(it,id){const c=(it.column_values||[]).find(x=>x.id===id);if(!c)return"";const v=c.display_value??c.text;return v==null?"":String(v).trim()}
+const clientOf=name=>String(name||"").replace(/^[^A-Za-z0-9]+/,"").split("_")[0].trim()||"Other";
+function toRow(it){
+  const stage=cv(it,COL.stage)||"No stage",days=parseInt(cv(it,COL.days),10);
+  return{id:String(it.id),name:String(it.name||"").trim(),url:it.url,stage,crSub:cv(it,COL.crSub),client:clientOf(it.name),creator:cv(it,COL.creator),
+    deadline:dayNum(cv(it,COL.deadline)),stageStart:dayNum(cv(it,COL.stageStart)),days:isNaN(days)?null:days};
+}
+
+/* ---------- KPI math ---------- */
+let rows=[],me=null,sel=null,weeks=[];
+function compute(){
+  const today=dayNum(todayStr()),thisWeek=weekStart(today);
+  weeks=Array.from({length:8},(_,i)=>thisWeek-(7-i)*7);
+  if(sel==null||!weeks.includes(sel))sel=thisWeek;
+  const done=rows.filter(r=>FINISHED.has(r.stage)&&r.stageStart!=null);
+  const posted=r=>r.stage==="Client Review"&&/^posted$/i.test(r.crSub);
+  const active=rows.filter(r=>!FINISHED.has(r.stage)&&!posted(r));
+  const perWeek=weeks.map(w=>{
+    const d=done.filter(r=>r.stageStart>=w&&r.stageStart<w+7);
+    const withDl=d.filter(r=>r.deadline!=null),onTime=withDl.filter(r=>r.stageStart<=r.deadline);
+    return{w,delivered:d.length,items:d,withDl:withDl.length,onTime:onTime.length,rate:withDl.length?onTime.length/withDl.length:null};
+  });
+  const late=active.filter(r=>r.stage!=="Client Review"&&r.deadline!=null&&r.deadline<today);
+  const stuck=active.filter(r=>r.stage!=="Client Review"&&r.stage!=="On Hold"&&(r.days??0)>=5);
+  const cr=active.filter(r=>r.stage==="Client Review");
+  return{today,perWeek,active,late,stuck,cr};
+}
+
+/* ---------- rendering ---------- */
+function delta(cur,prev,{pct=false,goodUp=true}={}){
+  if(cur==null||prev==null)return'<span class="d">No comparison</span>';
+  const diff=pct?Math.round((cur-prev)*100):cur-prev;
+  if(!diff)return`<span class="d">Same as the week before</span>`;
+  const good=(diff>0)===goodUp;
+  return`<span class="d"><b class="${good?"up":"down"}">${diff>0?"▲":"▼"} ${Math.abs(diff)}${pct?" pts":""}</b> vs the week before</span>`;
+}
+const pctText=r=>r==null?"–":Math.round(r*100)+"%";
+const avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:null;
+const avgDays=list=>{const v=avg(list.map(r=>r.days).filter(x=>x!=null));return v==null?"–":(Math.round(v*10)/10)+"d"};
+
+function tiles(k){
+  const i=weeks.indexOf(sel),cur=k.perWeek[i],prev=k.perWeek[i-1];
+  const lateDays=avg(k.late.map(r=>k.today-r.deadline));
+  const crDays=avgDays(k.cr);
+  $("tiles").innerHTML=[
+    {k:"Delivered",v:cur.delivered,d:delta(cur.delivered,prev&&prev.delivered)},
+    {k:"On-time rate",v:pctText(cur.rate),d:cur.withDl?delta(cur.rate,prev&&prev.rate,{pct:true})+`<span class="d">${cur.onTime} of ${cur.withDl} with a deadline</span>`:'<span class="d">No deliveries with a deadline</span>'},
+    {k:"Late now",v:k.late.length,d:`<span class="d">${lateDays==null?"Nothing past deadline":"Avg "+Math.round(lateDays)+" days late"}</span>`},
+    {k:"Stuck 5d+",v:k.stuck.length,d:`<span class="d">of ${k.active.length} active collabs</span>`},
+    {k:"Waiting on client",v:k.cr.length,d:`<span class="d">${k.cr.length?"Avg "+crDays+" in review":"Nothing in Client Review"}</span>`}
+  ].map(t=>`<div class="tile"><span class="k">${t.k}</span><span class="v">${t.v}</span>${t.d}</div>`).join("");
+}
+
+/* single-series column chart; the selected week is full strength, the rest recede */
+function columnChart(el,data,{max,fmt,tipFn}){
+  const W=520,H=200,P={l:34,r:8,t:18,b:26},iw=W-P.l-P.r,ih=H-P.t-P.b,band=iw/data.length,bw=Math.min(24,band*.55);
+  const top=max||Math.max(1,...data.map(d=>d.v||0));
+  const nice=max?max:Math.max(4,Math.ceil(top/4)*4);
+  const y=v=>P.t+ih-(v/nice)*ih;
+  const ticks=[0,nice/2,nice];
+  let g=ticks.map(t=>`<line x1="${P.l}" x2="${W-P.r}" y1="${y(t)}" y2="${y(t)}"/>`).join("");
+  let ax=ticks.map(t=>`<text x="${P.l-6}" y="${y(t)+4}" text-anchor="end">${fmt(t,true)}</text>`).join("");
+  let bars="",caps="",hits="",xl="";
+  data.forEach((d,i)=>{
+    const cx=P.l+band*i+band/2,x=cx-bw/2;
+    xl+=`<text x="${cx}" y="${H-8}" text-anchor="middle">${esc(d.label)}</text>`;
+    if(d.v!=null&&d.v>0){
+      const yy=y(d.v),h=P.t+ih-yy,r=Math.min(4,h);
+      bars+=`<path class="bar${d.on?"":" other"}" d="M${x},${P.t+ih}V${yy+r}Q${x},${yy} ${x+r},${yy}H${x+bw-r}Q${x+bw},${yy} ${x+bw},${yy+r}V${P.t+ih}Z"/>`;
+    }
+    if(d.on)caps+=`<text class="cap" x="${cx}" y="${(d.v?y(d.v):P.t+ih)-6}" text-anchor="middle">${d.v==null?"–":fmt(d.v)}</text>`;
+    hits+=`<rect class="hit" tabindex="0" data-i="${i}" x="${P.l+band*i}" y="${P.t}" width="${band}" height="${ih}" aria-label="${esc(tipFn(d).replace(/<[^>]+>/g," "))}"/>`;
+  });
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img"><g class="grid">${g}</g><g class="axis">${ax}${xl}</g>${bars}${caps}${hits}</svg><div class="tip" hidden></div>`;
+  const tip=el.querySelector(".tip"),svg=el.querySelector("svg");
+  const show=i=>{const d=data[i],r=svg.getBoundingClientRect(),sc=r.width/W,cx=(P.l+band*i+band/2)*sc,yy=(d.v?y(d.v):P.t+ih)*sc;
+    tip.innerHTML=tipFn(d);tip.hidden=false;tip.style.left=Math.min(Math.max(cx,70),r.width-70)+"px";tip.style.top=(yy-8)+"px"};
+  el.querySelectorAll(".hit").forEach(h=>{const i=+h.dataset.i;
+    h.addEventListener("mouseenter",()=>show(i));h.addEventListener("focus",()=>show(i));
+    h.addEventListener("mouseleave",()=>tip.hidden=true);h.addEventListener("blur",()=>tip.hidden=true);
+    h.addEventListener("click",()=>{sel=weeks[i];$("weekSel").value=sel;render()})});
+}
+
+function charts(k){
+  const thru=k.perWeek.map(p=>({label:shortWeek(p.w),v:p.delivered,on:p.w===sel,p}));
+  columnChart($("chThru"),thru,{fmt:v=>String(Math.round(v)),tipFn:d=>`<b>${esc(weekLabel(d.p.w))}</b>${d.v} delivered`});
+  const ot=k.perWeek.map(p=>({label:shortWeek(p.w),v:p.rate==null?null:p.rate*100,on:p.w===sel,p}));
+  columnChart($("chOnTime"),ot,{max:100,fmt:v=>Math.round(v)+"%",tipFn:d=>`<b>${esc(weekLabel(d.p.w))}</b>${d.p.withDl?`${pctText(d.p.rate)} on time (${d.p.onTime} of ${d.p.withDl})`:"No deliveries with a deadline"}`});
+  const head=`<table><thead><tr><th>Week</th><th class="n">Delivered</th><th class="n">On time</th><th class="n">Rate</th></tr></thead><tbody>`;
+  const body=k.perWeek.map(p=>`<tr><td>${esc(weekLabel(p.w))}</td><td class="n">${p.delivered}</td><td class="n">${p.onTime} / ${p.withDl}</td><td class="n">${pctText(p.rate)}</td></tr>`).join("");
+  $("tbThru").innerHTML=$("tbOnTime").innerHTML=head+body+"</tbody></table>";
+}
+
+function pipeline(k){
+  const by={};k.active.forEach(r=>(by[r.stage]=by[r.stage]||[]).push(r));
+  const stages=Object.keys(by).sort((a,b)=>{const ia=STAGE_ORDER.indexOf(a),ib=STAGE_ORDER.indexOf(b);return(ia<0?99:ia)-(ib<0?99:ib)});
+  const max=Math.max(1,...stages.map(s=>by[s].length));
+  $("pipeline").innerHTML=stages.length?stages.map(s=>`<div class="hb"><span class="sn"><i style="background:${STAGE_HEX[s]||"#8C93B4"}"></i>${esc(s)}</span>
+    <span class="track"><span class="fill" style="display:block;width:${by[s].length/max*100}%"></span></span>
+    <span class="val"><b>${by[s].length}</b> · ${avgDays(by[s])}</span></div>`).join(""):'<p class="hint">No active collabs.</p>';
+}
+
+function itemTable(list,cols){
+  if(!list.length)return'<p class="hint">Nothing here.</p>';
+  return`<table><thead><tr>${cols.map(c=>`<th${c.n?' class="n"':""}>${c.h}</th>`).join("")}</tr></thead><tbody>${list.map(r=>`<tr>${cols.map(c=>`<td${c.n?' class="n"':""}>${c.f(r)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+}
+const link=r=>r.url?`<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.name)}</a>`:esc(r.name);
+
+function lists(k){
+  /* client review: grouped by client */
+  const byC={};k.cr.forEach(r=>(byC[r.client]=byC[r.client]||[]).push(r));
+  const crRows=Object.entries(byC).map(([c,l])=>({c,n:l.length,avg:avgDays(l),max:Math.max(...l.map(r=>r.days??0))})).sort((a,b)=>b.max-a.max);
+  $("crw").innerHTML=crRows.length?`<table><thead><tr><th>Client</th><th class="n">Collabs</th><th class="n">Avg wait</th><th class="n">Longest</th></tr></thead><tbody>${
+    crRows.map(x=>`<tr><td>${esc(x.c)}</td><td class="n">${x.n}</td><td class="n">${x.avg}</td><td class="n">${x.max}d</td></tr>`).join("")}</tbody></table>`:'<p class="hint">Nothing waiting on clients.</p>';
+  /* oldest in stage */
+  const old=k.active.filter(r=>r.days!=null).sort((a,b)=>b.days-a.days).slice(0,8);
+  $("oldest").innerHTML=itemTable(old,[{h:"Collab",f:link},{h:"Stage",f:r=>esc(r.stage)},{h:"Days",n:1,f:r=>r.days+"d"}]);
+  /* delivered this week by client */
+  const cur=k.perWeek[weeks.indexOf(sel)];
+  $("byClientHint").textContent=`Week of ${weekLabel(sel)}.`;
+  const dc={};cur.items.forEach(r=>{const x=dc[r.client]=dc[r.client]||{n:0,on:0,dl:0};x.n++;if(r.deadline!=null){x.dl++;if(r.stageStart<=r.deadline)x.on++}});
+  const dcRows=Object.entries(dc).sort((a,b)=>b[1].n-a[1].n);
+  $("byClient").innerHTML=dcRows.length?`<table><thead><tr><th>Client</th><th class="n">Delivered</th><th class="n">On time</th></tr></thead><tbody>${
+    dcRows.map(([c,x])=>`<tr><td>${esc(c)}</td><td class="n">${x.n}</td><td class="n">${x.dl?`${x.on} / ${x.dl}`:"–"}</td></tr>`).join("")}</tbody></table>`:'<p class="hint">Nothing delivered this week yet.</p>';
+}
+
+function render(){
+  if(!rows)return;
+  const k=compute();
+  $("weekSel").innerHTML=weeks.slice().reverse().map(w=>`<option value="${w}"${w===sel?" selected":""}>${w===weeks[7]?"This week · ":w===weeks[6]?"Last week · ":""}${esc(weekLabel(w))}</option>`).join("");
+  tiles(k);charts(k);pipeline(k);lists(k);
+}
+$("weekSel").onchange=e=>{sel=+e.target.value;render()};
+
+/* ---------- loading & auth (same API and session as the digest) ---------- */
+async function api(path,body){
+  let r;
+  try{r=await fetch(path,{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify(body||{})})}
+  catch(e){throw{code:"server_unavailable"}}
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok)throw data.error||{code:"server_unavailable",message:"HTTP "+r.status};
+  return data;
+}
+function errCopy(e){
+  switch(e&&e.code){
+    case"no_monday_user":return(e.message||"Your Google email doesn't match a Monday.com user.")+" Ask Tessa to check.";
+    case"monday_token":return"The site's Monday.com connection stopped working. Ask Tessa to update the Monday token in Vercel.";
+    case"rate_limited":return"Monday.com is rate-limiting requests. Try Refresh in a minute.";
+    case"server_unavailable":return"Monday.com didn't answer in time. Press Refresh to try again.";
+    default:return"Couldn't load from Monday.com"+(e&&e.message?": "+e.message:"")+". Press Refresh to try again.";
+  }
+}
+function showNote(t,err){const n=$("note");n.textContent=t;n.className="note"+(err?" err":"");n.hidden=!t}
+let busy=false;
+async function load(){
+  if(busy)return;busy=true;
+  const b=$("refresh");b.disabled=true;b.classList.add("spin");$("freshText").textContent="Loading your collabs…";
+  try{
+    const p=await api("/api/monday",{op:"kpi"});
+    me=p.me;rows=(p.items||[]).map(toRow);
+    if(me&&me.name)$("who").textContent=me.name.split(" ")[0]+"'s";
+    showNote("");render();
+    $("freshText").textContent="Updated "+new Date().toLocaleTimeString("en-US",{timeZone:tz,hour:"numeric",minute:"2-digit"})+` · ${rows.length} collabs`;
+  }catch(e){
+    if(e&&e.code==="not_signed_in"){showGate("Your session ended. Sign in again.");return}
+    showNote(errCopy(e),true);$("freshText").textContent="Couldn't load";
+  }finally{busy=false;b.disabled=false;b.classList.remove("spin")}
+}
+$("refresh").onclick=load;
+function showGate(msg){$("app").hidden=true;$("gate").hidden=false;$("gateErr").textContent=msg||"";$("gateErr").hidden=!msg}
+$("signout").onclick=async()=>{try{await api("/api/auth/logout")}catch(e){}showGate("")};
+(async()=>{
+  let cfg={};try{cfg=await (await fetch("/api/config",{credentials:"same-origin"})).json()}catch(e){}
+  if(cfg.domain)$("gateDomain").textContent="@"+cfg.domain;
+  if(!cfg.signedIn){showGate("");return}
+  $("app").hidden=false;load();
+})();
+</script>
+</body>
+</html>
