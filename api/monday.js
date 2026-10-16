@@ -14,9 +14,12 @@ const MAX_PAGES = 6;
 
 // compare_value is a custom scalar in Monday's schema, so the person id is written into the query
 // (it's a numeric Monday user id, checked below) instead of passed as a typed variable.
-const listQuery = (userId) => `query($board:[ID!]){ boards(ids:$board){ items_page(limit:500, query_params:{rules:[
+// Stage label keys: 0 = Canceled, 14 = Completed. The digest skips both; the KPI page keeps Completed.
+const DIGEST_EXCLUDE = [0, 14];
+const KPI_EXCLUDE = [0];
+const listQuery = (userId, exclude) => `query($board:[ID!]){ boards(ids:$board){ items_page(limit:500, query_params:{rules:[
   {column_id:"${COL.cfs}", compare_value:["person-${userId}"], operator:any_of},
-  {column_id:"${COL.stage}", compare_value:[0,14], operator:not_any_of}]}){ cursor items{ ${ITEM_FIELDS} } } } }`;
+  {column_id:"${COL.stage}", compare_value:${JSON.stringify(exclude)}, operator:not_any_of}]}){ cursor items{ ${ITEM_FIELDS} } } } }`;
 const NEXT_Q = `query($cursor:String!){ next_items_page(limit:500, cursor:$cursor){ cursor items{ ${ITEM_FIELDS} } } }`;
 const UPD_Q = `query($ids:[ID!]){ items(ids:$ids, limit:100){ id updated_at
   column_values(ids:["${COL.cfs}"]){ ... on PeopleValue { persons_and_teams { id kind } } }
@@ -32,9 +35,9 @@ export async function POST(request) {
     let body;
     try { body = await request.json(); } catch { body = {}; }
 
-    if (body.op === "list") {
+    if (body.op === "list" || body.op === "kpi") {
       if (!/^\d+$/.test(String(user.id))) throw new AppError("tool_error", "Monday.com returned an unexpected user id.", 502);
-      const data = await monday(listQuery(user.id), { board: [BOARD] });
+      const data = await monday(listQuery(user.id, body.op === "kpi" ? KPI_EXCLUDE : DIGEST_EXCLUDE), { board: [BOARD] });
       const page = ((data.boards || [])[0] || {}).items_page || {};
       const items = [...(page.items || [])];
       let cursor = page.cursor;
