@@ -12,8 +12,10 @@ const COL_IDS = JSON.stringify([...Object.values(COL), ...SUB_IDS]);
 const ITEM_FIELDS = `id name url updated_at column_values(ids:${COL_IDS}){ id text ... on BoardRelationValue { display_value } ... on FormulaValue { display_value } }`;
 const MAX_PAGES = 6;
 
-const LIST_Q = `query($board:[ID!], $person:[CompareValue!]){ boards(ids:$board){ items_page(limit:500, query_params:{rules:[
-  {column_id:"${COL.cfs}", compare_value:$person, operator:any_of},
+// compare_value is a custom scalar in Monday's schema, so the person id is written into the query
+// (it's a numeric Monday user id, checked below) instead of passed as a typed variable.
+const listQuery = (userId) => `query($board:[ID!]){ boards(ids:$board){ items_page(limit:500, query_params:{rules:[
+  {column_id:"${COL.cfs}", compare_value:["person-${userId}"], operator:any_of},
   {column_id:"${COL.stage}", compare_value:[0,14], operator:not_any_of}]}){ cursor items{ ${ITEM_FIELDS} } } } }`;
 const NEXT_Q = `query($cursor:String!){ next_items_page(limit:500, cursor:$cursor){ cursor items{ ${ITEM_FIELDS} } } }`;
 const UPD_Q = `query($ids:[ID!]){ items(ids:$ids, limit:100){ id updated_at
@@ -31,7 +33,8 @@ export async function POST(request) {
     try { body = await request.json(); } catch { body = {}; }
 
     if (body.op === "list") {
-      const data = await monday(LIST_Q, { board: [BOARD], person: [`person-${user.id}`] });
+      if (!/^\d+$/.test(String(user.id))) throw new AppError("tool_error", "Monday.com returned an unexpected user id.", 502);
+      const data = await monday(listQuery(user.id), { board: [BOARD] });
       const page = ((data.boards || [])[0] || {}).items_page || {};
       const items = [...(page.items || [])];
       let cursor = page.cursor;
