@@ -1,6 +1,6 @@
 // Read-only Monday.com queries for the digest. The queries live here, not in the browser,
-// so this route can't be used as a general Monday.com proxy.
-import { json, monday, requireToken, errorResponse, whoAmI, MondayError } from "./_lib.js";
+// and every result is limited to collabs where the signed-in person is the CFS.
+import { json, monday, mondayUser, requireSession, errorResponse, AppError } from "./_lib.js";
 
 const BOARD = process.env.MONDAY_BOARD_ID || "18409265319";
 const COL = {
@@ -12,39 +12,46 @@ const COL_IDS = JSON.stringify([...Object.values(COL), ...SUB_IDS]);
 const ITEM_FIELDS = `id name url updated_at column_values(ids:${COL_IDS}){ id text ... on BoardRelationValue { display_value } ... on FormulaValue { display_value } }`;
 const MAX_PAGES = 6;
 
-const LIST_Q = `query($board:[ID!]){ me{ id name } boards(ids:$board){ items_page(limit:500, query_params:{rules:[
-  {column_id:"${COL.cfs}", compare_value:["assigned_to_me"], operator:any_of},
+const LIST_Q = `query($board:[ID!], $person:[CompareValue!]){ boards(ids:$board){ items_page(limit:500, query_params:{rules:[
+  {column_id:"${COL.cfs}", compare_value:$person, operator:any_of},
   {column_id:"${COL.stage}", compare_value:[0,14], operator:not_any_of}]}){ cursor items{ ${ITEM_FIELDS} } } } }`;
 const NEXT_Q = `query($cursor:String!){ next_items_page(limit:500, cursor:$cursor){ cursor items{ ${ITEM_FIELDS} } } }`;
-const UPD_Q = `query($ids:[ID!]){ items(ids:$ids, limit:100){ id updated_at updates(limit:6){ text_body created_at creator{ name } replies{ text_body created_at creator{ name } } } } }`;
+const UPD_Q = `query($ids:[ID!]){ items(ids:$ids, limit:100){ id updated_at
+  column_values(ids:["${COL.cfs}"]){ ... on PeopleValue { persons_and_teams { id kind } } }
+  updates(limit:6){ text_body created_at creator{ name } replies{ text_body created_at creator{ name } } } } }`;
+
+const isCfs = (item, userId) =>
+  (item.column_values || []).some((c) => (c.persons_and_teams || []).some((p) => p.kind === "person" && String(p.id) === String(userId)));
 
 export async function POST(request) {
   try {
-    const token = requireToken(request);
+    const session = requireSession(request);
+    const user = await mondayUser(session.email);
     let body;
     try { body = await request.json(); } catch { body = {}; }
 
     if (body.op === "list") {
-      const [, data] = await Promise.all([whoAmI(token), monday(token, LIST_Q, { board: [BOARD] })]);
+      const data = await monday(LIST_Q, { board: [BOARD], person: [`person-${user.id}`] });
       const page = ((data.boards || [])[0] || {}).items_page || {};
       const items = [...(page.items || [])];
       let cursor = page.cursor;
       for (let i = 1; cursor && i < MAX_PAGES; i++) {
-        const next = (await monday(token, NEXT_Q, { cursor })).next_items_page || {};
+        const next = (await monday(NEXT_Q, { cursor })).next_items_page || {};
         items.push(...(next.items || []));
         cursor = next.cursor;
       }
-      return json({ me: data.me, items });
+      return json({ me: { id: user.id, name: user.name }, items });
     }
 
     if (body.op === "updates") {
       const ids = Array.isArray(body.ids) ? body.ids.map(String).filter((id) => /^\d{1,20}$/.test(id)) : [];
-      if (!ids.length || ids.length > 100) throw new MondayError("bad_request", "Send between 1 and 100 item ids.", 400);
-      const data = await monday(token, UPD_Q, { ids });
-      return json({ items: data.items || [] });
+      if (!ids.length || ids.length > 100) throw new AppError("bad_request", "Send between 1 and 100 item ids.", 400);
+      const data = await monday(UPD_Q, { ids });
+      const items = (data.items || []).filter((it) => isCfs(it, user.id)).map(({ column_values, ...it }) => it);
+      return json({ items });
     }
 
-    throw new MondayError("bad_request", "Unknown operation.", 400);
+    throw new AppError("bad_request", "Unknown operation.", 400);
   } catch (e) {
     return errorResponse(e);
   }

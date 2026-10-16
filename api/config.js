@@ -1,10 +1,13 @@
-// Tells the page what's available: whether this browser is signed in, and which features are configured.
-import { json, getCookie, TOKEN_COOKIE, oauthEnabled, aiEnabled } from "./_lib.js";
+// Tells the page who is signed in and which features are configured.
+import { json, readSession, aiEnabled, allowedDomain, missingConfig } from "./_lib.js";
 
 export function GET(request) {
+  const s = readSession(request);
   return json({
-    signedIn: !!getCookie(request, TOKEN_COOKIE),
-    oauth: oauthEnabled(),
+    signedIn: !!s,
+    user: s ? { email: s.email, name: s.name } : null,
+    domain: allowedDomain(),
     ai: aiEnabled(),
+    missing: missingConfig(),
   });
 }
