@@ -4,11 +4,12 @@ The Collab Digest page and its guide, packaged to run on Vercel instead of claud
 
 All pages share one app shell (left sidebar, top bar with breadcrumb, theme toggle and account menu), modeled on the JetHire web app:
 
-- `public/index.html` is Home (`/`)
+- `public/index.html` is Home (`/`), with a today snapshot: Needs you / Due today / Late counts that open the matching digest group, plus the next three collabs to look at
 - `public/digest.html` is the digest (`/digest`), behind a "Continue with Google" sign-in
 - `public/kpi.html` is the weekly KPI dashboard (`/kpi`): delivered per week, on-time rate, late and stuck counts, pipeline by stage and client review waits, for the signed-in person's collabs
 - `public/guide.html` is the guide (`/guide`)
 - `public/shell.js` and `public/shell.css` draw the sidebar, top bar and sign-in screen; add a page to the `NAV` list in `shell.js` to put it in the sidebar
+- `public/collabs.js` holds the Monday column ids, the grouping rules and the loader, shared by the digest and the Home snapshot so their counts always match
 - `public/app.css` holds the styles the digest, KPI and Home pages share
 - `api/` holds the serverless functions:
   - `api/auth/*` handles Google sign-in, limited to one Workspace domain (`ALLOWED_EMAIL_DOMAIN`). The session is a signed, HttpOnly cookie that lasts 30 days.

@@ -9,6 +9,39 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="/app.css">
 <link rel="stylesheet" href="/shell.css">
+<style>
+/* Today snapshot: one card, JetHire project-card style. Three big counts that open the
+   matching digest group, a meta line, then the next three collabs to look at. */
+.today{background:var(--deck);border:1px solid var(--line);border-radius:18px;padding:20px 22px;display:flex;flex-direction:column;gap:16px;max-width:860px}
+.today-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.today-top h2{margin:0;font:600 16px/1.3 var(--f-display)}
+.today-top .when{font:500 12px var(--f-mono);color:var(--muted)}
+.counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.count{display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-radius:14px;border:1px solid var(--line);background:var(--deck-2);text-decoration:none;color:var(--text);position:relative;overflow:hidden;min-width:0}
+.count::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--k)}
+.count:hover{border-color:var(--muted)}
+.count b{font:600 44px/1 var(--f-body);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.count span{font:600 10.5px/1.3 var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.count.zero b{color:var(--muted)}
+.meta{font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 14px}
+.meta a{color:var(--muted)}
+.meta a:hover{color:var(--text)}
+.next{display:flex;flex-direction:column;gap:6px}
+.next .lbl{margin-bottom:2px}
+.nx{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:10px 12px 10px 14px;border-radius:12px;border:1px solid var(--line);background:var(--ink);position:relative;overflow:hidden}
+.nx::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--k)}
+.nx .n{font:500 13px/1.3 var(--f-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nx .r{font-size:12.5px;color:var(--muted);grid-column:1}
+.nx a{grid-row:1/3;grid-column:2;color:var(--crystal);font:600 12.5px var(--f-body);text-decoration:none;white-space:nowrap}
+.nx a:hover{text-decoration:underline}
+.today .empty-day{margin:0;color:var(--muted);font-size:14px}
+.skel{height:84px;border-radius:14px;background:linear-gradient(90deg,var(--deck-2),var(--line),var(--deck-2));background-size:200% 100%;animation:sk 1.4s linear infinite}
+@keyframes sk{to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.skel{animation:none}}
+@media (max-width:560px){.counts{grid-template-columns:minmax(0,1fr)}.count{flex-direction:row;align-items:center;justify-content:space-between}.count b{font-size:32px;order:2}.today{padding:16px}}
+.hero{padding-top:min(6vh,56px)}
+.hero-title{font-size:clamp(48px,8vw,92px)}
+</style>
 </head>
 <body data-page="home" data-crumb="Home" data-auth="required">
 <div class="shell" id="app" hidden>
@@ -26,6 +59,12 @@
       <a class="btn" href="/kpi">Weekly KPIs</a>
       <a class="btn" href="/guide">Guide</a>
     </div>
+    <section class="today" id="today" aria-live="polite" aria-label="Today">
+      <div class="today-top"><h2 id="todayTitle">Your day</h2><span class="when" id="todayWhen">Loading…</span></div>
+      <div class="counts" id="counts"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+      <div class="meta" id="todayMeta"></div>
+      <div class="next" id="next"></div>
+    </section>
     <p class="hero-note"><i></i><span>Collab Digest reads the Monday.com Production board and never changes it. You message creators yourself; it only drafts the words.</span></p>
   </section>
 </div>
@@ -33,6 +72,7 @@
 </div>
 </div>
 <script src="/shell.js"></script>
+<script src="/collabs.js"></script>
 <script>
 (async()=>{
   const cfg=await Shell.config;
@@ -40,12 +80,48 @@
   if(authErr)history.replaceState(null,"",location.pathname);
   const AUTH_ERR={denied:"Google sign-in was cancelled.",state:"Sign-in took too long. Try again.",exchange:"Google sign-in failed. Try again.",
     wrong_domain:"Use your company Google account. Personal Gmail accounts can't sign in.",not_configured:"Sign-in isn't set up yet."};
-  if(cfg.signedIn){document.getElementById("app").hidden=false;return}
+  if(cfg.signedIn){document.getElementById("app").hidden=false;loadToday();return}
   let msg=authErr?(AUTH_ERR[authErr]||"Sign-in failed."):"";
   if(cfg.missing&&cfg.missing.length)msg=msg||"Sign-in isn't set up yet. Missing in Vercel: "+cfg.missing.join(", ")+".";
   const err=document.getElementById("gateErr");err.textContent=msg;err.hidden=!msg;
   document.getElementById("gate").hidden=false;
 })();
+
+/* ---------- today snapshot ---------- */
+const $=id=>document.getElementById(id);
+const GROUP=Object.fromEntries(GROUPS.map((g,i)=>({...g,i})).map(g=>[g.key,g]));
+const BIG=["needsYou","dueToday","late"];
+const SMALL=[["waiting","waiting on client"],["stuck","stuck 5d+"],["changed","changed in 24h"]];
+async function loadToday(){
+  try{
+    const r=await fetchCollabs(new Map());
+    const handled=readHandled();
+    /* same counts as the digest chips: collabs you marked handled are left out */
+    const groups=Object.fromEntries(Object.entries(r.groups).map(([k,l])=>[k,l.filter(it=>!isHandledIn(handled,it))]));
+    const active=Object.values(groups).flat();
+    const first=(r.me&&r.me.name||"").split(" ")[0];
+    $("todayTitle").textContent=first?`${first}'s day`:"Your day";
+    $("todayWhen").textContent=new Date().toLocaleDateString("en-US",{timeZone:tz,weekday:"short",month:"short",day:"numeric"})+" · updated "+new Date().toLocaleTimeString("en-US",{timeZone:tz,hour:"numeric",minute:"2-digit"});
+    $("counts").innerHTML=BIG.map(k=>{const n=groups[k].length,g=GROUP[k];
+      return`<a class="count${n?"":" zero"}" href="/digest?tab=${k}" style="--k:${g.c}"><b>${n}</b><span>${esc(g.label)}</span></a>`}).join("");
+    $("todayMeta").innerHTML=`<span>${active.length} active collab${active.length===1?"":"s"}</span>`+
+      SMALL.map(([k,l])=>`<a href="/digest?tab=${k}">${groups[k].length} ${l}</a>`).join("");
+    /* next up: the three most urgent, in the digest's own order */
+    const due=it=>{const d=dueDate(it.deadline);return d?d.getTime():Infinity};
+    const top=active.filter(it=>BIG.includes(it.group)).sort((a,b)=>(GROUP[a.group].i-GROUP[b.group].i)||(b.mentionsMe-a.mentionsMe)||((b.daysLate||0)-(a.daysLate||0))||(due(a)-due(b))).slice(0,3);
+    $("next").innerHTML=top.length?`<span class="lbl">Next up</span>`+top.map(it=>`<div class="nx" style="--k:${GROUP[it.group].c}">
+      <span class="n" title="${esc(it.name)}">${esc(it.name)}</span><span class="r">${esc(it.reason||GROUP[it.group].label)}</span>
+      ${it.url?`<a href="${esc(it.url)}" target="_blank" rel="noopener">Monday ↗</a>`:""}</div>`).join(""):
+      `<p class="empty-day">Nothing needs you, nothing due today and nothing late. Nice.</p>`;
+  }catch(e){
+    if(e&&e.code==="not_signed_in"){location.reload();return}
+    const msg=e&&e.code==="no_monday_user"?"Your Google email doesn't match a Monday.com user. Ask Tessa to check.":
+      e&&e.code==="monday_token"?"The site's Monday.com connection stopped working. Ask Tessa to update the token.":
+      "Couldn't load today's numbers from Monday.com. Open My collabs or try again in a minute.";
+    $("todayWhen").textContent="Not loaded";$("counts").innerHTML="";$("todayMeta").innerHTML="";
+    $("next").innerHTML=`<p class="empty-day">${esc(msg)}</p>`;
+  }
+}
 </script>
 </body>
 </html>
