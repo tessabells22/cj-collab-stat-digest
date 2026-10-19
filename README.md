@@ -2,10 +2,14 @@
 
 The Collab Digest page and its guide, packaged to run on Vercel instead of claude.ai.
 
-- `public/index.html` is the digest (`/`), behind a "Continue with Google" sign-in
+All pages share one app shell (left sidebar, top bar with breadcrumb, theme toggle and account menu), modeled on the JetHire web app:
+
+- `public/index.html` is Home (`/`)
+- `public/digest.html` is the digest (`/digest`), behind a "Continue with Google" sign-in
 - `public/kpi.html` is the weekly KPI dashboard (`/kpi`): delivered per week, on-time rate, late and stuck counts, pipeline by stage and client review waits, for the signed-in person's collabs
 - `public/guide.html` is the guide (`/guide`)
-- `public/app.css` holds the styles both pages share
+- `public/shell.js` and `public/shell.css` draw the sidebar, top bar and sign-in screen; add a page to the `NAV` list in `shell.js` to put it in the sidebar
+- `public/app.css` holds the styles the digest, KPI and Home pages share
 - `api/` holds the serverless functions:
   - `api/auth/*` handles Google sign-in, limited to one Workspace domain (`ALLOWED_EMAIL_DOMAIN`). The session is a signed, HttpOnly cookie that lasts 30 days.
   - `api/monday.js` reads the Production board with one server-side Monday.com token. It looks up the Monday user whose email matches the Google login and only returns collabs where that person is the CFS. The queries are fixed server-side and nothing writes to Monday.

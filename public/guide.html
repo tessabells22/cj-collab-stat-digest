@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/shell.css">
 <style>
 /* Layout: same system as Collab Digest. One column: hero with setup progress, then five numbered parts (setup checklist, live demo, group quiz, hidden toggle, fixes) each in a panel. Dark by default with a Dark/Light toggle. */
 :root{
@@ -163,20 +164,19 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
 @media (prefers-reduced-motion:reduce){.chev,.bar i,.toggle input::after{transition:none}}
 </style>
 </head>
-<body>
+<body data-page="guide" data-crumb="Guide" data-auth="public">
+<div class="shell" id="app" hidden>
+<aside class="side"></aside>
+<div class="main">
+<header class="topbar"></header>
+<main class="content">
 <div class="wrap">
   <header>
-    <div class="toprow">
-      <div class="brand"><span class="bolt"><svg viewBox="0 0 24 24" fill="#fff"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></span>ContentJet · CFS Tools</div>
-      <div class="mode" role="group" aria-label="Color mode">
-        <button type="button" id="mDark" aria-pressed="true">Dark</button>
-        <button type="button" id="mLight" aria-pressed="false">Light</button>
-      </div>
-    </div>
+    <span class="eyebrow">Guide</span>
     <h1>Get the most out of <em>Collab Digest</em></h1>
     <p class="lede">Collab Digest shows every Production board collab where you're the CFS, sorted by what needs you first. No more scrolling the board or opening items one by one. It reads Monday.com live after you sign in with your company Google account and refreshes every 5 minutes. It never changes anything in Monday.</p>
     <div class="cta-row">
-      <a class="btn primary" href="/">Open Collab Digest →</a>
+      <a class="btn primary" href="/digest">Open my collabs →</a>
       <span class="progress"><span id="progText">Setup 0 of 3</span><span class="bar"><i id="progBar"></i></span></span>
     </div>
     <nav class="jump" aria-label="Sections">
@@ -242,16 +242,17 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
 
   <footer>Questions or ideas for Collab Digest? Message Tessa on Slack.</footer>
 </div>
+</main>
+</div>
+</div>
 
+<script src="/shell.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 /* mode */
-function setMode(m){document.documentElement.dataset.mode=m;$("mDark").setAttribute("aria-pressed",m==="dark");$("mLight").setAttribute("aria-pressed",m==="light");store.set("cd.mode",m)}
-setMode(store.get("cd.mode")||"dark");
-$("mDark").onclick=()=>setMode("dark");$("mLight").onclick=()=>setMode("light");
 
 /* 1 setup checklist */
 const stepIds=["s1","s2","s3"];
