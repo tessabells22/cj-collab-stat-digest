@@ -1,0 +1,89 @@
+/* App shell shared by every page: left sidebar, top bar with breadcrumb, theme and avatar,
+   then the page itself. Same structure as JetHire; colors come from each page's tokens. */
+[hidden]{display:none!important}
+.shell{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:100vh;min-height:100dvh}
+.shell.collapsed{grid-template-columns:72px minmax(0,1fr)}
+.side{position:sticky;top:0;height:100vh;height:100dvh;background:var(--deck);border-right:1px solid var(--line);padding:18px 12px;display:flex;flex-direction:column;gap:22px;overflow-y:auto;z-index:20}
+.side-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:2px 6px 0 10px}
+.wordmark{display:flex;flex-direction:column;gap:7px;text-decoration:none;color:var(--text);min-width:0}
+.wordmark b{font:600 21px/1 var(--f-display);letter-spacing:-.03em;white-space:nowrap}
+.wordmark b i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--violet);margin-left:2px;vertical-align:baseline}
+.wordmark small{font:600 9.5px/1.3 var(--f-display);letter-spacing:.16em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.wordmark .mono{display:none;width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--violet),var(--crystal));color:#fff;font:700 13px/30px var(--f-display);text-align:center}
+.side-btn{appearance:none;border:0;background:transparent;color:var(--muted);width:28px;height:28px;border-radius:8px;display:grid;place-items:center;cursor:pointer;flex:none}
+.side-btn:hover{background:var(--deck-2);color:var(--text)}
+.side-btn svg{width:16px;height:16px}
+.nav{display:flex;flex-direction:column;gap:4px}
+.nav a{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:10px;color:var(--muted);text-decoration:none;font:500 14px/1.2 var(--f-body);border:1px solid transparent;white-space:nowrap}
+.nav a svg{width:18px;height:18px;flex:none}
+.nav a:hover{color:var(--text);background:var(--deck-2)}
+.nav a[aria-current="page"]{color:var(--text);background:var(--deck-2);border-color:var(--line);font-weight:600}
+.side-foot{margin-top:auto;font-size:11.5px;color:var(--muted);padding:0 10px;line-height:1.5}
+.shell.collapsed .wordmark b,.shell.collapsed .wordmark small,.shell.collapsed .nav a span,.shell.collapsed .side-foot{display:none}
+.shell.collapsed .wordmark .mono{display:block}
+.shell.collapsed .side-head{flex-direction:column;align-items:center;padding:0}
+.shell.collapsed .nav a{justify-content:center;padding:10px}
+.shell.collapsed .side-btn.collapse svg{transform:rotate(180deg)}
+.main{min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:10;min-height:52px;display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:12px;padding:0 max(16px,env(safe-area-inset-right,0px)) 0 24px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--ink) 88%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.top-left{display:flex;align-items:center;gap:10px;min-width:0}
+.crumb{font:600 11px/1 var(--f-display);letter-spacing:.18em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-actions{display:flex;align-items:center;gap:10px;position:relative}
+.iconbtn{appearance:none;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--deck);color:var(--muted);display:grid;place-items:center;cursor:pointer;padding:0}
+.iconbtn:hover{color:var(--text)}
+.iconbtn svg{width:16px;height:16px}
+.burger{display:none}
+.avatar{appearance:none;width:34px;height:34px;border-radius:50%;border:0;background:linear-gradient(135deg,var(--violet),var(--crystal));color:#fff;font:600 12.5px/1 var(--f-body);cursor:pointer;padding:0}
+.usermenu{position:absolute;right:0;top:44px;min-width:220px;background:var(--deck);border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:0 12px 32px rgba(0,0,0,.28);display:flex;flex-direction:column;gap:10px}
+.usermenu .who-name{font-weight:600;font-size:14px}
+.usermenu .who-mail{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.usermenu button{appearance:none;text-align:left;background:var(--deck-2);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:9px 12px;font:600 13px var(--f-body);cursor:pointer}
+.signin-link{font:600 13px var(--f-body);color:var(--text);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:8px 14px;background:var(--deck)}
+.scrim{display:none}
+.content .wrap{padding-top:40px}
+/* page header, JetHire style: eyebrow, big title, subtitle; actions on the right */
+.page-head{display:flex;flex-direction:row;justify-content:space-between;align-items:flex-end;gap:16px 24px;flex-wrap:wrap}
+.page-head>div:first-child{display:flex;flex-direction:column;gap:8px;min-width:0;flex:1 1 420px}
+.eyebrow{font:600 11px/1.2 var(--f-display);letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.head-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+/* buttons */
+.btn{appearance:none;display:inline-flex;align-items:center;gap:8px;font:600 14.5px/1 var(--f-body);border-radius:10px;padding:14px 22px;border:1px solid var(--line);background:transparent;color:var(--text);cursor:pointer;text-decoration:none}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:linear-gradient(135deg,var(--violet),#5B3FE0);border-color:transparent;color:#fff;box-shadow:0 6px 24px rgba(124,92,252,.3)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn svg{width:15px;height:15px}
+/* home hero */
+.hero{max-width:860px;display:flex;flex-direction:column;gap:22px;padding-top:min(10vh,90px)}
+.hero-title{margin:0;font:700 clamp(54px,10vw,112px)/.95 var(--f-display);letter-spacing:-.045em}
+.hero-title em{font-style:normal;background:linear-gradient(90deg,var(--crystal),var(--violet) 50%,var(--lume));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero-sub{margin:4px 0 0;font-size:18px;color:var(--muted);max-width:56ch}
+.hero-actions{display:flex;gap:12px;flex-wrap:wrap}
+.hero-note{margin:0;padding-top:22px;border-top:1px solid var(--line);font-size:13.5px;color:var(--muted);display:flex;gap:10px;max-width:640px}
+.hero-note i{width:6px;height:6px;border-radius:50%;background:var(--text);margin-top:8px;flex:none}
+@media (max-width:860px){
+  .shell,.shell.collapsed{grid-template-columns:minmax(0,1fr)}
+  .side{position:fixed;inset:0 auto 0 0;width:270px;transform:translateX(-102%);transition:transform .2s;box-shadow:0 0 40px rgba(0,0,0,.35)}
+  .shell.nav-open .side{transform:none}
+  .shell.collapsed .wordmark b,.shell.collapsed .wordmark small,.shell.collapsed .nav a span,.shell.collapsed .side-foot{display:revert}
+  .shell.collapsed .wordmark .mono{display:none}
+  .shell.collapsed .side-head{flex-direction:row;align-items:flex-start;padding:2px 6px 0 10px}
+  .shell.collapsed .nav a{justify-content:flex-start;padding:9px 12px}
+  .side-btn.collapse{display:none}
+  .burger{display:grid}
+  .shell.nav-open .scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:15}
+  .topbar{padding-left:max(16px,env(safe-area-inset-left,0px))}
+  .content .wrap{padding-top:24px}
+}
+@media (prefers-reduced-motion:reduce){.side{transition:none}}
+/* sign-in screen */
+.gate{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:32px max(16px,env(safe-area-inset-left,0px))}
+.gate .brand{justify-content:center}
+.gate-card{width:100%;max-width:400px;background:var(--deck);border:1px solid var(--line);border-radius:18px;padding:32px 28px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.gate-card h1{font:600 22px/1.25 var(--f-display);letter-spacing:-.01em}
+.gate-card p{margin:0;color:var(--muted);font-size:14px}
+.gate-card p b{color:var(--text);font-weight:600}
+.gbtn{margin-top:14px;width:100%;display:inline-flex;align-items:center;justify-content:center;gap:10px;font:600 15px/1 var(--f-body);padding:14px 18px;border-radius:12px;background:var(--text);color:var(--ink);text-decoration:none}
+.gbtn:hover{filter:brightness(.92)}
+.gbtn svg{width:18px;height:18px}
+.gate .note{max-width:400px;width:100%;text-align:left}
+.gate-foot{max-width:340px;text-align:center;font-size:12px;color:var(--muted)}
