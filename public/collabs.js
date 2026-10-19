@@ -149,3 +149,17 @@ function backReasonFor(handled,it){
   return"";
 }
 function isHandledIn(handled,it){return!!handled[it.id]&&!backReasonFor(handled,it)}
+
+/* ---------- creators ---------- */
+/* the creator column can hold several people: "Ava K, Ben Lim" */
+const creatorNames=s=>String(s||"").split(/\s*,\s*/).map(x=>x.trim()).filter(Boolean);
+const firstName=s=>String(s||"").trim().split(/\s+/)[0]||"there";
+const shortDue=s=>{const d=dueDate(s);return d?d.toLocaleDateString("en-US",{timeZone:tz,month:"short",day:"numeric"}):""};
+/* the next step is the creator's: filming, revisions, or something they owe (a Post-Production
+   Pending Asset is the PP Manager's, not the creator's) */
+const CREATOR_STAGES=/^(creator assignment|production|revisions?)$/i;
+function creatorOwes(r){
+  const ppAsset=r.stage==="Post-Production"&&/^pending asset$/i.test(r.subStage);
+  return CREATOR_STAGES.test(r.stage)||(!ppAsset&&YOUR_MOVE.test(r.subStage||""));
+}
+const isLate=r=>r.overdue&&creatorOwes(r);

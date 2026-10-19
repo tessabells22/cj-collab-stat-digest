@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Messages</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/app.css">
+<link rel="stylesheet" href="/shell.css">
+<style>
+/* Messages: pick a creator, tick their collabs, pick a template; the draft fills itself in.
+   A second view, Chase list, drafts one late nudge per creator who owes something. */
+.wrap{max-width:1120px;gap:24px}
+.card{background:var(--deck);border:1px solid var(--line);border-radius:18px;padding:22px 24px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.card h3{margin:0;font:600 16px/1.3 var(--f-display)}
+.hint{margin:0;font-size:13px;color:var(--muted)}
+.writer{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:16px;align-items:start}
+.field{display:flex;flex-direction:column;gap:8px}
+.field select{font:14px var(--f-body);color:var(--text);background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%}
+.picks{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto}
+.pick{display:grid;grid-template-columns:18px minmax(0,1fr);gap:10px;align-items:start;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--ink);cursor:pointer}
+.pick input{margin:2px 0 0;accent-color:var(--violet)}
+.pick .n{font:500 12.5px/1.35 var(--f-mono);overflow-wrap:anywhere}
+.pick .s{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.pick .s b{font-weight:600}
+.late-t{color:var(--danger-text)}.today-t{color:var(--orange)}
+.tpls{display:flex;flex-direction:column;gap:6px}
+.tpl{appearance:none;text-align:left;display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--text);cursor:pointer;font:inherit}
+.tpl b{font-weight:600;font-size:13.5px}
+.tpl span{font-size:12px;color:var(--muted)}
+.tpl[aria-pressed="true"]{border-color:var(--violet);background:rgba(124,92,252,.12)}
+.tpl:hover{border-color:var(--muted)}
+.editor textarea{width:100%;min-height:360px;resize:vertical;background:var(--ink);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:14px 16px;font:14px/1.6 var(--f-body)}
+.acts{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.abtn{appearance:none;font:600 13px/1 var(--f-body);border-radius:10px;padding:11px 16px;background:transparent;color:var(--text);border:1px solid var(--line);cursor:pointer}
+.abtn:hover{border-color:var(--muted)}
+.abtn.primary{background:linear-gradient(135deg,var(--violet),#5B3FE0);border-color:transparent;color:#fff}
+.abtn:disabled{opacity:.6;cursor:progress}
+.ed-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.count{font:500 12px var(--f-mono);color:var(--muted)}
+.chase{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,460px),1fr));gap:16px}
+.chase .card textarea{min-height:220px}
+.chase-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.chase-head .meta{font-size:12.5px;color:var(--muted)}
+.empty-note{margin:0;color:var(--muted);font-size:14px}
+.seg-row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+@media (max-width:860px){.writer{grid-template-columns:minmax(0,1fr)}.editor textarea{min-height:300px}}
+@media (max-width:640px){.card{padding:18px}}
+</style>
+</head>
+<body data-page="messages" data-crumb="Messages" data-auth="required">
+<div class="shell" id="app" hidden>
+<aside class="side"></aside>
+<div class="main">
+<header class="topbar"></header>
+<main class="content">
+<div class="wrap">
+  <header class="page-head">
+    <div>
+      <span class="eyebrow">Messages · for Brkaway</span>
+      <h1>Message a <em>creator</em></h1>
+      <p class="lede"><span class="fresh" id="fresh"><i></i><span id="freshText">Loading your collabs…</span></span><span>Pick a creator and a template; the draft fills in their collabs and deadlines. Copy it into Brkaway.</span></p>
+    </div>
+  </header>
+  <div class="note" id="note" hidden></div>
+
+  <div class="seg-row">
+    <div class="seg" role="group" aria-label="View"><button type="button" id="vWrite" aria-pressed="true">Write a message</button><button type="button" id="vChase" aria-pressed="false">Chase list</button></div>
+    <span class="hint" id="chaseHint"></span>
+  </div>
+
+  <section id="writeView" class="writer">
+    <div class="card">
+      <label class="field"><span class="lbl">Creator</span><select id="crSel"></select></label>
+      <div class="field"><span class="lbl">Collabs to mention</span><div class="picks" id="picks"></div></div>
+      <div class="field"><span class="lbl">Template</span><div class="tpls" id="tpls"></div></div>
+    </div>
+    <div class="card editor">
+      <div class="ed-head"><h3 id="edTitle">Message</h3><span class="count" id="edCount"></span></div>
+      <textarea id="draft" aria-label="Message to the creator"></textarea>
+      <div class="acts">
+        <button type="button" class="abtn primary" id="copyBtn">Copy message</button>
+        <button type="button" class="abtn" id="aiBtn" hidden>Rewrite with Claude</button>
+        <button type="button" class="abtn" id="resetBtn">Reset to template</button>
+        <span class="hint" id="edHint">Edit anything before you send it.</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="chaseView" hidden>
+    <p class="hint" style="margin:0 0 14px">One late nudge per creator who owes you something past its deadline. Only collabs where the next step is the creator's (filming, revisions, a pending asset) are included.</p>
+    <div class="chase" id="chase"></div>
+  </section>
+
+  <footer>Nothing is sent from here. Copy a message and paste it into Brkaway yourself.</footer>
+</div>
+</main>
+</div>
+</div>
+
+<script src="/shell.js"></script>
+<script src="/collabs.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+let rows=[],me=null,aiOn=false,creator="",tplKey="",picked=new Set(),edited=false;
+
+const lineFor=r=>`● ${r.name}${r.deadline?` (due ${shortDue(r.deadline)})`:""}`;
+const listOf=rs=>rs.map(lineFor).join("\n");
+const oneOrMany=(rs,one,many)=>rs.length===1?one:many;
+
+/* ---------- templates ---------- */
+const TEMPLATES=[
+  {key:"late",label:"Late nudge",desc:"Past the deadline and the next step is theirs.",pick:r=>isLate(r),
+   build:(f,rs)=>`Hi ${f}! 😊 Hope you're doing well. Just a quick heads-up that ${oneOrMany(rs,"this collab is","these collabs are")} now past the deadline:\n\n${listOf(rs)}\n\nCould you send everything over as soon as you can? If anything is holding you up, let me know and we'll sort it out together. Thank you so much! 🙏`},
+  {key:"asset",label:"Asset chase",desc:"Missing files, clips or details we need.",pick:r=>/pending asset|needs clarification|product access/i.test(r.subStage)&&creatorOwes(r),
+   build:(f,rs)=>`Hi ${f}! 😊 Thanks again for working with us. We're still missing a few things to move forward on ${oneOrMany(rs,"this collab","these collabs")}:\n\n${listOf(rs)}\n\n● [what's missing, e.g. raw clips, product photo, script confirmation]\n\nCould you send ${oneOrMany(rs,"it","them")} over when you get a chance? Thank you! 🙏`},
+  {key:"revision",label:"Revision request",desc:"Changes the team or client asked for.",pick:r=>/revision/i.test(r.stage+" "+r.subStage),
+   build:(f,rs)=>`Hi ${f}! 😊 Thank you for your videos! Our team reviewed ${oneOrMany(rs,"this collab","these collabs")} and has a few changes before we can move forward:\n\n${listOf(rs)}\n\nRequested changes:\n● [change 1]\n● [change 2]\n\nCould you send the updated ${oneOrMany(rs,"version","versions")}${rs.some(r=>r.deadline)?` by ${shortDue(rs.map(r=>r.deadline).filter(Boolean).sort()[0])}`:" as soon as you can"}? Thank you! 🙏`},
+  {key:"soon",label:"Deadline reminder",desc:"Due in the next few days.",pick:r=>{const d=daysUntil(r.deadline);return d!=null&&d>=0&&d<=3&&creatorOwes(r)},
+   build:(f,rs)=>`Hi ${f}! 😊 Just a friendly reminder that ${oneOrMany(rs,"this collab is","these collabs are")} coming up soon:\n\n${listOf(rs)}\n\nHow's everything going? Let me know if you need anything from us before then. Thank you! 🙌`},
+  {key:"checkin",label:"Check-in",desc:"How's filming going?",pick:r=>creatorOwes(r),
+   build:(f,rs)=>`Hi ${f}! 😊 Just checking in on ${oneOrMany(rs,"your collab","your collabs")}:\n\n${listOf(rs)}\n\nHow's filming going? Let me know if you have any questions or need anything from us!`},
+  {key:"welcome",label:"Welcome",desc:"Kick-off for a new collab.",pick:r=>/^(planning|creative direction|creator assignment)$/i.test(r.stage),
+   build:(f,rs)=>`Hi ${f}! 😊 Welcome aboard, and thank you so much for joining ${oneOrMany(rs,"this collab","these collabs")}:\n\n${listOf(rs)}\n\nWe're finalizing everything on our side and will share the brief and next steps soon. Feel free to reach out with any questions in the meantime!`},
+  {key:"received",label:"Videos received",desc:"Their part is done; it's with our team.",pick:r=>/^(qc - production|post-production|qc - post-production|upload|client review)$/i.test(r.stage),
+   build:(f,rs)=>`Hi ${f}! 😊 Thank you so much for your videos for ${oneOrMany(rs,"this collab","these collabs")}:\n\n${listOf(rs)}\n\nThey're with our team now. We'll reach out right away if we need anything else. Really appreciate you! 🙏`},
+];
+const TPL=Object.fromEntries(TEMPLATES.map(t=>[t.key,t]));
+
+/* ---------- state ---------- */
+const creators=()=>{const m={};rows.forEach(r=>creatorNames(r.creator).forEach(n=>(m[n]=m[n]||[]).push(r)));return m};
+const rowsOf=name=>rows.filter(r=>creatorNames(r.creator).includes(name));
+function defaultTpl(rs){return["late","asset","revision","soon","checkin","welcome","received"].find(k=>rs.some(TPL[k].pick))||"checkin"}
+function pickFor(rs,key){const p=rs.filter(TPL[key].pick);return new Set((p.length?p:rs).map(r=>r.id))}
+
+/* creators with the most late collabs first, then A to Z */
+function orderedCreators(){const m=creators();return Object.keys(m).sort((a,b)=>m[b].filter(isLate).length-m[a].filter(isLate).length||a.localeCompare(b))}
+function renderCreatorSel(){
+  const m=creators(),names=orderedCreators();
+  if(!names.includes(creator))creator=names[0]||"";
+  $("crSel").innerHTML=names.length?names.map(n=>{const l=m[n].filter(isLate).length;return`<option value="${esc(n)}"${n===creator?" selected":""}>${esc(n)} · ${m[n].length} active${l?` · ${l} late`:""}</option>`}).join(""):'<option value="">No active collabs</option>';
+}
+function renderPicks(){
+  const rs=rowsOf(creator);
+  $("picks").innerHTML=rs.length?rs.map(r=>{const left=daysUntil(r.deadline),cls=r.overdue?"late-t":left===0?"today-t":"";
+    return`<label class="pick"><input type="checkbox" data-id="${esc(r.id)}"${picked.has(r.id)?" checked":""}><span><span class="n">${esc(r.name)}</span><span class="s">${esc(r.stage)}${r.subStage?` · ${esc(r.subStage)}`:""}${r.delays?` · <b class="${cls}">${esc(r.delays)}</b>`:""}</span></span></label>`}).join(""):'<p class="empty-note">Pick a creator.</p>';
+  $("picks").querySelectorAll("input").forEach(c=>c.onchange=()=>{c.checked?picked.add(c.dataset.id):picked.delete(c.dataset.id);fill(true)});
+}
+function renderTpls(){
+  $("tpls").innerHTML=TEMPLATES.map(t=>`<button type="button" class="tpl" data-k="${t.key}" aria-pressed="${t.key===tplKey}"><b>${esc(t.label)}</b><span>${esc(t.desc)}</span></button>`).join("");
+  $("tpls").querySelectorAll(".tpl").forEach(b=>b.onclick=()=>{if(edited&&!confirm("Replace your edits with this template?"))return;tplKey=b.dataset.k;picked=pickFor(rowsOf(creator),tplKey);renderPicks();renderTpls();fill(false)});
+}
+function fill(keepIfEdited){
+  if(keepIfEdited&&edited)return countChars();
+  const rs=rowsOf(creator).filter(r=>picked.has(r.id));
+  $("edTitle").textContent=`${TPL[tplKey].label} to ${creator?firstName(creator):"…"}`;
+  $("draft").value=creator&&rs.length?TPL[tplKey].build(firstName(creator),rs):"";
+  edited=false;$("edHint").textContent=rs.length?"Edit anything before you send it.":"Tick at least one collab.";countChars();
+}
+const countChars=()=>{$("edCount").textContent=$("draft").value.length+" characters"};
+function selectCreator(name,key){
+  creator=name||orderedCreators()[0]||"";name=creator;const rs=rowsOf(name);tplKey=key&&TPL[key]?key:defaultTpl(rs);picked=pickFor(rs,tplKey);
+  renderCreatorSel();renderPicks();renderTpls();fill(false);
+}
+$("crSel").onchange=e=>{if(edited&&!confirm("Switch creator? Your edits will be replaced."))return void($("crSel").value=creator);selectCreator(e.target.value)};
+$("draft").addEventListener("input",()=>{edited=true;countChars()});
+$("resetBtn").onclick=()=>fill(false);
+
+async function copyFrom(ta,btn,label){
+  try{await navigator.clipboard.writeText(ta.value);btn.textContent="Copied"}
+  catch(e){ta.focus();ta.select();btn.textContent="Press Ctrl+C"}
+  setTimeout(()=>btn.textContent=label,1600);
+}
+$("copyBtn").onclick=e=>copyFrom($("draft"),e.currentTarget,"Copy message");
+$("aiBtn").onclick=async()=>{
+  const btn=$("aiBtn"),rs=rowsOf(creator).filter(r=>picked.has(r.id));if(!rs.length)return;
+  btn.disabled=true;$("edHint").textContent="Claude is writing…";
+  try{
+    const {text}=await api("/api/rewrite",{name:rs.map(r=>r.name).join(", "),creator,purpose:TPL[tplKey].label,draft:$("draft").value,
+      collabs:rs.map(r=>({name:r.name,stage:r.stage,subStage:r.subStage,deadline:r.deadline,timing:r.delays,latest:(r.latest&&r.latest.text)||""}))});
+    $("draft").value=text;edited=true;countChars();$("edHint").textContent="Check it before sending.";
+  }catch(e){$("edHint").textContent=(e&&e.message&&e.code!=="internal")?e.message:"Claude couldn't write this one. The template still works."}
+  finally{btn.disabled=false}
+};
+
+/* ---------- chase list ---------- */
+function renderChase(){
+  const m=creators(),list=Object.entries(m).map(([n,rs])=>({n,late:rs.filter(isLate)})).filter(x=>x.late.length).sort((a,b)=>b.late.length-a.late.length||a.n.localeCompare(b.n));
+  $("chaseHint").textContent=list.length?`${list.length} creator${list.length===1?"":"s"} to chase`:"";
+  $("vChase").textContent=`Chase list${list.length?` (${list.length})`:""}`;
+  $("chase").innerHTML=list.length?list.map((x,i)=>`<div class="card"><div class="chase-head"><div><h3>${esc(x.n)}</h3><span class="meta">${x.late.length} late · most overdue ${Math.max(...x.late.map(r=>r.daysLate))}d</span></div>
+      <a class="hint" href="?creator=${encodeURIComponent(x.n)}&t=late" data-open="${esc(x.n)}">Open in writer</a></div>
+      <textarea id="ch${i}" aria-label="Late nudge for ${esc(x.n)}">${esc(TPL.late.build(firstName(x.n),x.late))}</textarea>
+      <div class="acts"><button type="button" class="abtn primary" data-copy="ch${i}">Copy message</button></div></div>`).join(""):
+    '<div class="card"><p class="empty-note">Nobody owes you anything past its deadline. Nice.</p></div>';
+  $("chase").querySelectorAll("[data-copy]").forEach(b=>b.onclick=()=>copyFrom($(b.dataset.copy),b,"Copy message"));
+  $("chase").querySelectorAll("[data-open]").forEach(a=>a.onclick=e=>{e.preventDefault();setView("write");selectCreator(a.dataset.open,"late")});
+}
+function setView(v){$("vWrite").setAttribute("aria-pressed",v==="write");$("vChase").setAttribute("aria-pressed",v==="chase");$("writeView").hidden=v!=="write";$("chaseView").hidden=v!=="chase"}
+$("vWrite").onclick=()=>setView("write");$("vChase").onclick=()=>setView("chase");
+
+/* ---------- load ---------- */
+function showNote(t,err){const n=$("note");n.textContent=t;n.className="note"+(err?" err":"");n.hidden=!t}
+function showGate(msg){if(window.Shell)Shell.setUser(null);$("app").hidden=true;$("gate").hidden=false;$("gateErr").textContent=msg||"";$("gateErr").hidden=!msg}
+$("signout").onclick=async()=>{try{await api("/api/auth/logout")}catch(e){}showGate("")};
+(async()=>{
+  const cfg=await Shell.config;
+  if(!cfg.signedIn){showGate("");return}
+  $("app").hidden=false;aiOn=!!cfg.ai;$("aiBtn").hidden=!aiOn;
+  try{
+    const r=await fetchCollabs(new Map());me=r.me;rows=Object.values(r.groups).flat();
+    $("freshText").textContent=`${rows.length} active collabs · updated `+new Date().toLocaleTimeString("en-US",{timeZone:tz,hour:"numeric",minute:"2-digit"});
+    const qs=new URLSearchParams(location.search),qc=qs.get("creator"),qt=qs.get("t");
+    if(qc||qt)history.replaceState(null,"",location.pathname);
+    renderChase();
+    selectCreator(qc&&creators()[qc]?qc:"",qt);
+    if(qs.get("view")==="chase")setView("chase");
+  }catch(e){
+    if(e&&e.code==="not_signed_in"){showGate("Your session ended. Sign in again.");return}
+    $("freshText").textContent="Couldn't load";showNote(e&&e.code==="no_monday_user"?"Your Google email doesn't match a Monday.com user. Ask Tessa to check.":"Couldn't load your collabs from Monday.com. Try again in a minute.",true);
+  }
+})();
+</script>
+</body>
+</html>
