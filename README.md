@@ -6,7 +6,7 @@ All pages share one app shell (left sidebar, top bar with breadcrumb, theme togg
 
 - `public/index.html` is Home (`/`), with a today snapshot: Needs you / Due today / Late counts that open the matching digest group, plus the next three collabs to look at
 - `public/digest.html` is the digest (`/digest`), behind a "Continue with Google" sign-in
-- `public/kpi.html` is the weekly KPI dashboard (`/kpi`): delivered per week, on-time rate, late and stuck counts, pipeline by stage and client review waits, for the signed-in person's collabs
+- `public/kpi.html` is the weekly KPI dashboard (`/kpi`) for the signed-in person's collabs, in five sections: At a glance (delivered, on-time rate, cycle time, due this week; plus active, late, stuck, waiting on client, in revision right now), Delivery (8-week charts for deliveries split on time / late, on-time rate and cycle time), Coming up (deadline load for the next 14 days and what's due in 7), Workload (pipeline by stage, active by client) and Watchlist (late now, client review waits, oldest in stage, delivered by client)
 - `public/guide.html` is the guide (`/guide`)
 - `public/shell.js` and `public/shell.css` draw the sidebar, top bar and sign-in screen; add a page to the `NAV` list in `shell.js` to put it in the sidebar
 - `public/collabs.js` holds the Monday column ids, the grouping rules and the loader, shared by the digest and the Home snapshot so their counts always match

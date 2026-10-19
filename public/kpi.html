@@ -10,52 +10,89 @@
 <link rel="stylesheet" href="/app.css">
 <link rel="stylesheet" href="/shell.css">
 <style>
-/* Weekly KPIs: same system as the digest. Header, week picker, a KPI row of stat tiles,
-   two single-series weekly column charts, then pipeline / client review / clients panels. */
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
-.tile{background:var(--deck);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
-.tile .k{font:600 10.5px/1.2 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
-.tile .v{font:600 30px/1.1 var(--f-body);font-variant-numeric:tabular-nums}
-.tile .d{font-size:12.5px;color:var(--muted)}
+/* Weekly KPIs. Five sections, each with its own heading so the page reads top to bottom:
+   At a glance (week tiles + right-now tiles), Delivery (trend charts), Coming up (deadline
+   load), Workload (stage and client mix), Watchlist (tables to act on). */
+:root{--s-on:var(--violet);--s-late:#D6782C;--s-none:var(--muted)}
+:root[data-mode="light"]{--s-late:#C9680A}
+.wrap{max-width:1120px;gap:28px}
+.sec{display:flex;flex-direction:column;gap:16px;padding-top:12px}
+.sec-head{display:flex;justify-content:space-between;align-items:flex-end;gap:8px 16px;flex-wrap:wrap}
+.sec-head>div{display:flex;flex-direction:column;gap:6px}
+.sec-head h2{margin:0;font:600 22px/1.2 var(--f-display);letter-spacing:-.01em}
+.sec-head p{margin:0;color:var(--muted);font-size:14px;max-width:70ch}
+.tiles{display:grid;gap:14px}
+.tiles.big{grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))}
+.tiles.small{grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr))}
+.tile{background:var(--deck);border:1px solid var(--line);border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:8px;min-width:0;position:relative;overflow:hidden}
+.tile .k{font:600 10.5px/1.2 var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.tile .v{font:600 44px/1 var(--f-body);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.tile .v small{font-size:18px;font-weight:500;color:var(--muted);margin-left:4px;letter-spacing:0}
+.tile .d{font-size:13px;color:var(--muted);line-height:1.45}
 .tile .d b{font-weight:600}
+.tiles.small .tile{padding:16px 18px;gap:6px}
+.tiles.small .tile .v{font-size:30px}
+.tile.flag::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--fc)}
 .up{color:var(--lume)}.down{color:var(--danger)}
-.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:12px}
-.card{background:var(--deck);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
-.card h2{margin:0;font:600 15px/1.3 var(--f-display)}
-.card .hint{margin:0}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:16px}
+.card{background:var(--deck);border:1px solid var(--line);border-radius:18px;padding:22px 24px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px 16px;flex-wrap:wrap}
+.card-head>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.card h3{margin:0;font:600 16px/1.3 var(--f-display)}
+.card .hint{margin:0;font-size:13px;color:var(--muted)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
 .chart{position:relative}
 .chart svg{display:block;width:100%;height:auto;overflow:visible}
 .chart .grid line{stroke:var(--line);stroke-width:1}
-.chart .axis text{fill:var(--muted);font:11px var(--f-body)}
-.chart .cap{fill:var(--text);font:600 11.5px var(--f-body)}
-.chart .bar{fill:var(--violet)}
-.chart .bar.other{opacity:.45}
+.chart .axis text{fill:var(--muted);font:11.5px var(--f-body)}
+.chart .axis text.today{fill:var(--text);font-weight:600}
+.chart .cap{fill:var(--text);font:600 12px var(--f-body)}
+.chart .on{fill:var(--s-on)}.chart .late{fill:var(--s-late)}.chart .none{fill:var(--s-none);opacity:.55}
+.chart .dim{opacity:.5}
 .chart .hit{fill:transparent;cursor:default}
 .chart .hit:focus{outline:none}
 .chart .hit:focus-visible{stroke:var(--violet);stroke-width:2}
-.tip{position:absolute;pointer-events:none;background:var(--deck-2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12.5px;white-space:nowrap;box-shadow:0 6px 20px rgba(0,0,0,.25);transform:translate(-50%,-100%);z-index:2}
+.chart .hit.click{cursor:pointer}
+.tip{position:absolute;pointer-events:none;background:var(--deck-2);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:12.5px;line-height:1.5;white-space:nowrap;box-shadow:0 6px 20px rgba(0,0,0,.25);transform:translate(-50%,-100%);z-index:2}
 .tip b{display:block;font-weight:600}
+.tip i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}
 details.tbl summary{cursor:pointer;font-size:12.5px;color:var(--crystal);font-weight:600}
-table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
-th{text-align:left;font:600 10.5px/1.2 var(--f-display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--line)}
-td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top;overflow-wrap:anywhere}
-td.n,th.n{text-align:right}
+details.tbl[open] summary{margin-bottom:8px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+th{text-align:left;font:600 10.5px/1.2 var(--f-display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top;overflow-wrap:anywhere}
+td.n,th.n{text-align:right;white-space:nowrap}
 tr:last-child td{border-bottom:0}
-.hbars{display:flex;flex-direction:column;gap:8px}
-.hb{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr) auto;gap:10px;align-items:center;font-size:13px}
-.hb .sn{display:flex;align-items:center;gap:7px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hb .sn i{width:8px;height:8px;border-radius:50%;flex:none}
-.hb .track{height:10px;border-radius:999px;background:var(--deck-2);overflow:hidden}
-.hb .fill{height:100%;border-radius:999px;background:var(--violet)}
-.hb .val{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12.5px;white-space:nowrap}
-.hb .val b{color:var(--text);font-weight:600}
-.weekpick{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.weekpick select{font:13.5px var(--f-body);color:var(--text);background:var(--deck);border:1px solid var(--line);border-radius:10px;padding:13px 12px;max-width:100%;min-width:0}
-.weekpick{min-width:0;max-width:100%}
-@media (max-width:480px){.head-actions{width:100%}.weekpick{flex:1 1 100%}.weekpick select{flex:1}}
 td a{color:var(--crystal);text-decoration:none}
 td a:hover{text-decoration:underline}
-@media (max-width:640px){.hb{grid-template-columns:minmax(0,110px) minmax(0,1fr) auto}.tile .v{font-size:26px}}
+td .sub{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.pill-late{color:var(--danger-text);font-weight:600}
+.hbars{display:flex;flex-direction:column;gap:12px}
+.hb{display:grid;grid-template-columns:minmax(0,170px) minmax(0,1fr) auto;gap:12px;align-items:center;font-size:13.5px}
+.hb .sn{display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hb .sn i{width:9px;height:9px;border-radius:50%;flex:none}
+.hb .track{height:12px;border-radius:999px;background:var(--deck-2);overflow:hidden;display:flex;gap:2px}
+.hb .fill{height:100%;background:var(--s-on)}
+.hb .fill.late{background:var(--s-late)}
+.hb .fill:first-child{border-radius:999px 0 0 999px}
+.hb .fill:last-child{border-radius:0 999px 999px 0}
+.hb .fill:only-child{border-radius:999px}
+.hb .val{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12.5px;white-space:nowrap;text-align:right;min-width:92px}
+.hb .val b{color:var(--text);font-weight:600}
+.empty-note{margin:0;color:var(--muted);font-size:14px;padding:6px 0}
+.weekpick{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;max-width:100%}
+.weekpick select{font:13.5px var(--f-body);color:var(--text);background:var(--deck);border:1px solid var(--line);border-radius:10px;padding:13px 12px;max-width:100%;min-width:0}
+footer{line-height:1.6}
+@media (max-width:640px){
+  .tile{padding:16px 18px}.tile .v{font-size:34px}.tiles.small .tile .v{font-size:26px}
+  .card{padding:18px}.hb{grid-template-columns:minmax(0,110px) minmax(0,1fr) auto}.hb .val{min-width:0}
+  .sec-head h2{font-size:19px}
+  table{font-size:13px}th,td{padding:8px 6px}.opt{display:none}
+  td:first-child{overflow-wrap:break-word;word-break:break-word}
+}
+@media (max-width:480px){.head-actions{width:100%}.weekpick{flex:1 1 100%}.weekpick select{flex:1}}
 </style>
 </head>
 <body data-page="kpi" data-crumb="Weekly KPIs" data-auth="required">
@@ -78,196 +115,286 @@ td a:hover{text-decoration:underline}
   </header>
   <div class="note" id="note" hidden></div>
 
-  <section class="kpis" id="tiles" aria-label="Key numbers"></section>
-
-  <section class="grid2">
-    <div class="card"><h2>Delivered per week</h2><p class="hint">Collabs that reached Approved or Completed, last 8 weeks.</p><div class="chart" id="chThru"></div>
-      <details class="tbl"><summary>Show as table</summary><div id="tbThru"></div></details></div>
-    <div class="card"><h2>On-time rate per week</h2><p class="hint">Share of that week's deliveries finished on or before their deadline.</p><div class="chart" id="chOnTime"></div>
-      <details class="tbl"><summary>Show as table</summary><div id="tbOnTime"></div></details></div>
+  <!-- 1 -->
+  <section class="sec" aria-labelledby="h-glance">
+    <div class="sec-head"><div><span class="eyebrow" id="weekEyebrow">This week</span><h2 id="h-glance">At a glance</h2></div></div>
+    <div class="tiles big" id="tilesWeek"></div>
+    <div class="sec-head"><div><span class="eyebrow">Right now</span></div></div>
+    <div class="tiles small" id="tilesNow"></div>
   </section>
 
-  <section class="grid2">
-    <div class="card"><h2>Pipeline by stage</h2><p class="hint">Active collabs now, with average days in their current stage.</p><div class="hbars" id="pipeline"></div></div>
-    <div class="card"><h2>Waiting on client review</h2><p class="hint">In Client Review now, by client. Longest waits first.</p><div id="crw"></div></div>
+  <!-- 2 -->
+  <section class="sec" aria-labelledby="h-delivery">
+    <div class="sec-head"><div><span class="eyebrow">Delivery</span><h2 id="h-delivery">How the last 8 weeks went</h2>
+      <p>Click a week in any chart to switch the whole page to it.</p></div></div>
+    <div class="card">
+      <div class="card-head"><div><h3>Delivered per week</h3><p class="hint">Collabs that reached Approved or Completed, split by whether they beat their deadline.</p></div>
+        <div class="legend"><span><i style="background:var(--s-on)"></i>On time</span><span><i style="background:var(--s-late)"></i>Late</span><span><i style="background:var(--s-none);opacity:.55"></i>No deadline</span></div></div>
+      <div class="chart" id="chThru"></div>
+      <details class="tbl"><summary>Show as table</summary><div id="tbThru"></div></details>
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="card-head"><div><h3>On-time rate</h3><p class="hint">Share of each week's deliveries finished on or before their deadline.</p></div></div>
+        <div class="chart" id="chOnTime"></div></div>
+      <div class="card"><div class="card-head"><div><h3>Cycle time</h3><p class="hint">Median days from the collab being created to it being delivered.</p></div></div>
+        <div class="chart" id="chCycle"></div></div>
+    </div>
   </section>
 
-  <section class="grid2">
-    <div class="card"><h2>Oldest in stage</h2><p class="hint">Active collabs that have sat longest in their current stage.</p><div id="oldest"></div></div>
-    <div class="card"><h2>Delivered this week by client</h2><p class="hint" id="byClientHint"></p><div id="byClient"></div></div>
+  <!-- 3 -->
+  <section class="sec" aria-labelledby="h-coming">
+    <div class="sec-head"><div><span class="eyebrow">Coming up</span><h2 id="h-coming">Deadlines in the next two weeks</h2>
+      <p id="comingNote">Open collabs only, by deadline day.</p></div></div>
+    <div class="card">
+      <div class="card-head"><div><h3>Deadline load, next 14 days</h3><p class="hint">How many of your open collabs are due each day. Today is in bold.</p></div></div>
+      <div class="chart" id="chDue"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div><h3>Due in the next 7 days</h3><p class="hint">Soonest first.</p></div></div>
+      <div id="dueList"></div>
+    </div>
   </section>
 
-  <footer id="foot">"Delivered" means the collab reached Approved or Completed; its date is the day it entered that stage, so a collab approved one week and completed the next counts in the later week. Collabs without a deadline are left out of the on-time rate.</footer>
+  <!-- 4 -->
+  <section class="sec" aria-labelledby="h-load">
+    <div class="sec-head"><div><span class="eyebrow">Workload</span><h2 id="h-load">Where your collabs sit</h2></div></div>
+    <div class="grid2">
+      <div class="card"><div class="card-head"><div><h3>Pipeline by stage</h3><p class="hint">Active collabs now · average days in stage · how many are 5 days or more.</p></div></div><div class="hbars" id="pipeline"></div></div>
+      <div class="card"><div class="card-head"><div><h3>Active by client</h3><p class="hint">Active collabs per client, late ones in orange.</p></div>
+        <div class="legend"><span><i style="background:var(--s-on)"></i>On track</span><span><i style="background:var(--s-late)"></i>Late</span></div></div><div class="hbars" id="byClientNow"></div></div>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="sec" aria-labelledby="h-watch">
+    <div class="sec-head"><div><span class="eyebrow">Watchlist</span><h2 id="h-watch">What to chase</h2></div></div>
+    <div class="grid2">
+      <div class="card"><div class="card-head"><div><h3>Late now</h3><p class="hint">Past deadline and not with the client. Most days late first.</p></div></div><div id="lateList"></div></div>
+      <div class="card"><div class="card-head"><div><h3>Waiting on client review</h3><p class="hint">In Client Review now, by client. Longest wait first.</p></div></div><div id="crw"></div></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="card-head"><div><h3>Oldest in stage</h3><p class="hint">Active collabs that have sat longest in their current stage.</p></div></div><div id="oldest"></div></div>
+      <div class="card"><div class="card-head"><div><h3>Delivered by client</h3><p class="hint" id="byClientHint"></p></div></div><div id="byClient"></div></div>
+    </div>
+  </section>
+
+  <footer id="foot">"Delivered" means the collab reached Approved or Completed; its date is the day it entered that stage, so a collab approved one week and completed the next counts in the later week. Collabs without a deadline are left out of the on-time rate. Cycle time runs from the day the collab was created in Monday to that delivery day.</footer>
 </div>
 </main>
 </div>
 </div>
 
 <script src="/shell.js"></script>
+<script src="/collabs.js"></script>
 <script>
 const $=id=>document.getElementById(id);
-const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
-const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const tz="Asia/Manila",DAY=864e5;
-const COL={stage:"color_mm26weve",deadline:"date_mm3rpv64",creator:"board_relation_mm57zxnz",days:"formula_mm26np49",stageStart:"date_mm26qbn7",crSub:"color_mm26qtzn"};
+const DAY=864e5;
 const FINISHED=new Set(["Approved","Completed"]);
 const STAGE_ORDER=["Planning","Creative Direction","Creator Assignment","Production","QC - Production","Post-Production","QC - Post-Production","Upload","Client Review","Posting","Revision","Revisions","On Hold"];
-const STAGE_HEX={"Planning":"#66ccff","Creative Direction":"#ffcb00","Creator Assignment":"#fdab3d","Production":"#9d50dd","QC - Production":"#784bd1","Post-Production":"#579bfc",
-  "QC - Post-Production":"#5a86d6","Client Review":"#9cd326","Revision":"#ff007f","Revisions":"#ff007f","Upload":"#ff5ac4","On Hold":"#8a8a99","Posting":"#4a8ff0"};
 
-
-/* ---------- dates: everything as Manila calendar days, weeks start Monday ---------- */
-const todayStr=()=>new Intl.DateTimeFormat("en-CA",{timeZone:tz}).format(new Date()); /* YYYY-MM-DD */
-const dayNum=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s||"");return m?Date.UTC(+m[1],m[2]-1,+m[3])/DAY:null};
+/* ---------- dates: Manila calendar days, weeks start Monday ---------- */
+const manilaDay=iso=>{const d=iso?new Date(iso):null;return d&&!isNaN(d)?dayNum(new Intl.DateTimeFormat("en-CA",{timeZone:tz}).format(d)):null};
 const weekStart=n=>n-((new Date(n*DAY).getUTCDay()+6)%7);
 const fmtDay=n=>new Date(n*DAY).toLocaleDateString("en-US",{timeZone:"UTC",month:"short",day:"numeric"});
+const fmtDow=n=>new Date(n*DAY).toLocaleDateString("en-US",{timeZone:"UTC",weekday:"short"});
 const weekLabel=w=>`${fmtDay(w)} – ${fmtDay(w+6)}`;
-const shortWeek=w=>fmtDay(w);
 
 /* ---------- Monday → rows ---------- */
-function cv(it,id){const c=(it.column_values||[]).find(x=>x.id===id);if(!c)return"";const v=c.display_value??c.text;return v==null?"":String(v).trim()}
-const clientOf=name=>String(name||"").replace(/^[^A-Za-z0-9]+/,"").split("_")[0].trim()||"Other";
 function toRow(it){
   const stage=cv(it,COL.stage)||"No stage",days=parseInt(cv(it,COL.days),10);
-  return{id:String(it.id),name:String(it.name||"").trim(),url:it.url,stage,crSub:cv(it,COL.crSub),client:clientOf(it.name),creator:cv(it,COL.creator),
-    deadline:dayNum(cv(it,COL.deadline)),stageStart:dayNum(cv(it,COL.stageStart)),days:isNaN(days)?null:days};
+  let sub=SUB[stage]?cv(it,SUB[stage]):"";if(sub==="-")sub="";
+  return{id:String(it.id),name:String(it.name||"").trim(),url:it.url,stage,sub,client:clientOf(it.name),creator:cv(it,COL.creator),
+    deadline:dayNum(cv(it,COL.deadline)),stageStart:dayNum(cv(it,COL.stageStart)),created:manilaDay(it.created_at),days:isNaN(days)?null:days};
 }
 
 /* ---------- KPI math ---------- */
 let rows=[],me=null,sel=null,weeks=[];
+const median=a=>{if(!a.length)return null;const s=a.slice().sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
+const avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:null;
+const round1=v=>v==null?null:Math.round(v*10)/10;
 function compute(){
-  const today=dayNum(todayStr()),thisWeek=weekStart(today);
+  const today=todayNum(),thisWeek=weekStart(today);
   weeks=Array.from({length:8},(_,i)=>thisWeek-(7-i)*7);
   if(sel==null||!weeks.includes(sel))sel=thisWeek;
   const done=rows.filter(r=>FINISHED.has(r.stage)&&r.stageStart!=null);
-  const posted=r=>r.stage==="Client Review"&&/^posted$/i.test(r.crSub);
+  const posted=r=>r.stage==="Client Review"&&/^posted$/i.test(r.sub);
   const active=rows.filter(r=>!FINISHED.has(r.stage)&&!posted(r));
   const perWeek=weeks.map(w=>{
     const d=done.filter(r=>r.stageStart>=w&&r.stageStart<w+7);
-    const withDl=d.filter(r=>r.deadline!=null),onTime=withDl.filter(r=>r.stageStart<=r.deadline);
-    return{w,delivered:d.length,items:d,withDl:withDl.length,onTime:onTime.length,rate:withDl.length?onTime.length/withDl.length:null};
+    const withDl=d.filter(r=>r.deadline!=null),onTime=withDl.filter(r=>r.stageStart<=r.deadline),late=withDl.filter(r=>r.stageStart>r.deadline);
+    const cycles=d.filter(r=>r.created!=null&&r.stageStart>=r.created).map(r=>r.stageStart-r.created);
+    const dueIn=rows.filter(r=>r.deadline!=null&&r.deadline>=w&&r.deadline<w+7);
+    return{w,delivered:d.length,items:d,withDl:withDl.length,onTime:onTime.length,late:late.length,noDl:d.length-withDl.length,
+      rate:withDl.length?onTime.length/withDl.length:null,lateDays:avg(late.map(r=>r.stageStart-r.deadline)),
+      cycle:median(cycles),cycleN:cycles.length,
+      due:dueIn.length,dueDone:dueIn.filter(r=>FINISHED.has(r.stage)).length,dueOpen:dueIn.filter(r=>!FINISHED.has(r.stage)).length,
+      dueLate:dueIn.filter(r=>!FINISHED.has(r.stage)&&r.deadline<today).length};
   });
   const late=active.filter(r=>r.stage!=="Client Review"&&r.deadline!=null&&r.deadline<today);
   const stuck=active.filter(r=>r.stage!=="Client Review"&&r.stage!=="On Hold"&&(r.days??0)>=5);
   const cr=active.filter(r=>r.stage==="Client Review");
-  return{today,perWeek,active,late,stuck,cr};
+  const revision=active.filter(r=>/^revisions?$/i.test(r.stage)||/revision/i.test(r.sub));
+  const upcoming=Array.from({length:14},(_,i)=>{const day=today+i;return{day,items:active.filter(r=>r.deadline===day)}});
+  return{today,perWeek,active,late,stuck,cr,revision,upcoming};
 }
 
-/* ---------- rendering ---------- */
-function delta(cur,prev,{pct=false,goodUp=true}={}){
-  if(cur==null||prev==null)return'<span class="d">No comparison</span>';
-  const diff=pct?Math.round((cur-prev)*100):cur-prev;
+/* ---------- small helpers ---------- */
+function delta(cur,prev,{pct=false,goodUp=true,unit=""}={}){
+  if(cur==null||prev==null)return'<span class="d">No comparison with the week before</span>';
+  const diff=pct?Math.round((cur-prev)*100):round1(cur-prev);
   if(!diff)return`<span class="d">Same as the week before</span>`;
   const good=(diff>0)===goodUp;
-  return`<span class="d"><b class="${good?"up":"down"}">${diff>0?"▲":"▼"} ${Math.abs(diff)}${pct?" pts":""}</b> vs the week before</span>`;
+  return`<span class="d"><b class="${good?"up":"down"}">${diff>0?"▲":"▼"} ${Math.abs(diff)}${pct?" pts":unit}</b> vs the week before</span>`;
 }
 const pctText=r=>r==null?"–":Math.round(r*100)+"%";
-const avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:null;
-const avgDays=list=>{const v=avg(list.map(r=>r.days).filter(x=>x!=null));return v==null?"–":(Math.round(v*10)/10)+"d"};
-
-function tiles(k){
-  const i=weeks.indexOf(sel),cur=k.perWeek[i],prev=k.perWeek[i-1];
-  const lateDays=avg(k.late.map(r=>k.today-r.deadline));
-  const crDays=avgDays(k.cr);
-  $("tiles").innerHTML=[
-    {k:"Delivered",v:cur.delivered,d:delta(cur.delivered,prev&&prev.delivered)},
-    {k:"On-time rate",v:pctText(cur.rate),d:cur.withDl?delta(cur.rate,prev&&prev.rate,{pct:true})+`<span class="d">${cur.onTime} of ${cur.withDl} with a deadline</span>`:'<span class="d">No deliveries with a deadline</span>'},
-    {k:"Late now",v:k.late.length,d:`<span class="d">${lateDays==null?"Nothing past deadline":"Avg "+Math.round(lateDays)+" days late"}</span>`},
-    {k:"Stuck 5d+",v:k.stuck.length,d:`<span class="d">of ${k.active.length} active collabs</span>`},
-    {k:"Waiting on client",v:k.cr.length,d:`<span class="d">${k.cr.length?"Avg "+crDays+" in review":"Nothing in Client Review"}</span>`}
-  ].map(t=>`<div class="tile"><span class="k">${t.k}</span><span class="v">${t.v}</span>${t.d}</div>`).join("");
+const daysText=v=>v==null?"–":(round1(v)+"d");
+const avgDays=list=>daysText(avg(list.map(r=>r.days).filter(x=>x!=null)));
+const plural=(n,w)=>`${n} ${w}${n===1?"":"s"}`;
+const link=r=>r.url?`<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.name)}</a>`:esc(r.name);
+function table(list,cols,empty){
+  if(!list.length)return`<p class="empty-note">${empty||"Nothing here."}</p>`;
+  const cls=c=>{const k=[c.n?"n":"",c.o?"opt":""].filter(Boolean).join(" ");return k?` class="${k}"`:""};
+  return`<table><thead><tr>${cols.map(c=>`<th${cls(c)}>${c.h}</th>`).join("")}</tr></thead><tbody>${list.map(r=>`<tr>${cols.map(c=>`<td${cls(c)}>${c.f(r)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
 }
 
-/* single-series column chart; the selected week is full strength, the rest recede */
-function columnChart(el,data,{max,fmt,tipFn}){
-  const W=520,H=200,P={l:34,r:8,t:18,b:26},iw=W-P.l-P.r,ih=H-P.t-P.b,band=iw/data.length,bw=Math.min(24,band*.55);
-  const top=max||Math.max(1,...data.map(d=>d.v||0));
-  const nice=max?max:Math.max(4,Math.ceil(top/4)*4);
+/* ---------- section 1: tiles ---------- */
+function tiles(k){
+  const i=weeks.indexOf(sel),cur=k.perWeek[i],prev=k.perWeek[i-1];
+  const isNow=sel===weeks[7];
+  $("weekEyebrow").textContent=(isNow?"This week":sel===weeks[6]?"Last week":"Week")+" · "+weekLabel(sel);
+  $("tilesWeek").innerHTML=[
+    {k:"Delivered",v:cur.delivered,d:delta(cur.delivered,prev&&prev.delivered)+`<span class="d">${cur.onTime} on time · ${cur.late} late · ${cur.noDl} no deadline</span>`},
+    {k:"On-time rate",v:pctText(cur.rate),d:cur.withDl?delta(cur.rate,prev&&prev.rate,{pct:true})+`<span class="d">${cur.onTime} of ${cur.withDl} with a deadline${cur.late?` · late ones averaged ${daysText(cur.lateDays)} over`:""}</span>`:'<span class="d">No deliveries with a deadline this week</span>'},
+    {k:"Cycle time",v:cur.cycle==null?"–":`${round1(cur.cycle)}<small>days</small>`,d:cur.cycleN?delta(cur.cycle,prev&&prev.cycle,{goodUp:false,unit:"d"})+`<span class="d">Median, created to delivered, ${plural(cur.cycleN,"collab")}</span>`:'<span class="d">No deliveries to measure</span>'},
+    {k:"Due this week",v:cur.due,d:`<span class="d">${cur.dueDone} delivered · ${cur.dueOpen} still open${cur.dueLate?` · <b class="down">${cur.dueLate} already late</b>`:""}</span>`},
+  ].map(t=>`<div class="tile"><span class="k">${t.k}</span><span class="v">${t.v}</span>${t.d}</div>`).join("");
+  const lateDays=avg(k.late.map(r=>k.today-r.deadline));
+  $("tilesNow").innerHTML=[
+    {k:"Active collabs",v:k.active.length,d:`${plural(k.upcoming.slice(0,7).reduce((s,d)=>s+d.items.length,0),"deadline")} in the next 7 days`},
+    {k:"Late now",v:k.late.length,d:lateDays==null?"Nothing past deadline":`Avg ${Math.round(lateDays)} days late`,fc:k.late.length?"var(--danger)":""},
+    {k:"Stuck 5d+",v:k.stuck.length,d:"Same stage 5 days or more",fc:k.stuck.length?"var(--gold)":""},
+    {k:"Waiting on client",v:k.cr.length,d:k.cr.length?`Avg ${avgDays(k.cr)} in review`:"Nothing in Client Review"},
+    {k:"In revision",v:k.revision.length,d:"Revision stage or sub-stage"},
+  ].map(t=>`<div class="tile${t.fc?" flag":""}"${t.fc?` style="--fc:${t.fc}"`:""}><span class="k">${t.k}</span><span class="v">${t.v}</span><span class="d">${t.d}</span></div>`).join("");
+}
+
+/* ---------- charts: column chart with optional stacked segments ----------
+   data: [{label, segs:[{v, cls}], total, on, sub, tip}]; single series = one seg. */
+function columnChart(el,data,{H=220,max,fmt=v=>String(Math.round(v)),capAll=false,clickable=true,boldLabel}={}){
+  /* draw at the card's real width so text stays 11.5px instead of shrinking with the viewBox */
+  const W=Math.max(300,Math.round(el.clientWidth||720)),P={l:38,r:10,t:22,b:boldLabel?40:28},iw=W-P.l-P.r,ih=H-P.t-P.b,band=iw/data.length,bw=Math.min(24,band*.5);
+  const top=max||Math.max(1,...data.map(d=>d.total||0));
+  const nice=max||Math.max(4,Math.ceil(top/4)*4);
   const y=v=>P.t+ih-(v/nice)*ih;
   const ticks=[0,nice/2,nice];
   let g=ticks.map(t=>`<line x1="${P.l}" x2="${W-P.r}" y1="${y(t)}" y2="${y(t)}"/>`).join("");
-  let ax=ticks.map(t=>`<text x="${P.l-6}" y="${y(t)+4}" text-anchor="end">${fmt(t,true)}</text>`).join("");
+  let ax=ticks.map(t=>`<text x="${P.l-8}" y="${y(t)+4}" text-anchor="end">${fmt(t,true)}</text>`).join("");
   let bars="",caps="",hits="",xl="";
+  /* thin the x labels when they would collide: keep every nth, plus the highlighted one */
+  const longest=Math.max(...data.map(d=>Math.max(String(d.label).length,String(d.sub||"").length)));
+  const step=Math.max(1,Math.ceil((longest*6.6+8)/band));
   data.forEach((d,i)=>{
-    const cx=P.l+band*i+band/2,x=cx-bw/2;
-    xl+=`<text x="${cx}" y="${H-8}" text-anchor="middle">${esc(d.label)}</text>`;
-    if(d.v!=null&&d.v>0){
-      const yy=y(d.v),h=P.t+ih-yy,r=Math.min(4,h);
-      bars+=`<path class="bar${d.on?"":" other"}" d="M${x},${P.t+ih}V${yy+r}Q${x},${yy} ${x+r},${yy}H${x+bw-r}Q${x+bw},${yy} ${x+bw},${yy+r}V${P.t+ih}Z"/>`;
+    const cx=P.l+band*i+band/2,x=cx-bw/2,showLbl=d.on||(i%step===0&&!data.slice(Math.max(0,i-step+1),i+step).some((o,j)=>o.on&&o!==d));
+    if(showLbl){
+      xl+=`<text x="${cx}" y="${H-(boldLabel?24:8)}" text-anchor="middle"${d.on&&boldLabel?' class="today"':""}>${esc(d.label)}</text>`;
+      if(d.sub)xl+=`<text x="${cx}" y="${H-8}" text-anchor="middle"${d.on?' class="today"':""}>${esc(d.sub)}</text>`;
     }
-    if(d.on)caps+=`<text class="cap" x="${cx}" y="${(d.v?y(d.v):P.t+ih)-6}" text-anchor="middle">${d.v==null?"–":fmt(d.v)}</text>`;
-    hits+=`<rect class="hit" tabindex="0" data-i="${i}" x="${P.l+band*i}" y="${P.t}" width="${band}" height="${ih}" aria-label="${esc(tipFn(d).replace(/<[^>]+>/g," "))}"/>`;
+    let base=P.t+ih;const segs=(d.segs||[]).filter(s=>s.v>0);
+    segs.forEach((s,j)=>{
+      const h=(s.v/nice)*ih,isTop=j===segs.length-1,yy=base-h+(j?2:0),hh=Math.max(0,h-(j?2:0)),r=isTop?Math.min(4,hh):0;
+      const cls=s.cls+(d.on?"":" dim");
+      bars+=r?`<path class="${cls}" d="M${x},${base}V${yy+r}Q${x},${yy} ${x+r},${yy}H${x+bw-r}Q${x+bw},${yy} ${x+bw},${yy+r}V${base}Z"/>`:`<rect class="${cls}" x="${x}" y="${yy}" width="${bw}" height="${hh}"/>`;
+      base-=h;
+    });
+    if((d.on||(capAll&&d.total))&&d.total!=null)caps+=`<text class="cap" x="${cx}" y="${(d.total?y(d.total):P.t+ih)-7}" text-anchor="middle">${d.capText??fmt(d.total)}</text>`;
+    hits+=`<rect class="hit${clickable?" click":""}" tabindex="0" data-i="${i}" x="${P.l+band*i}" y="${P.t}" width="${band}" height="${ih}" aria-label="${esc(String(d.tip||"").replace(/<[^>]+>/g," "))}"/>`;
   });
   el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img"><g class="grid">${g}</g><g class="axis">${ax}${xl}</g>${bars}${caps}${hits}</svg><div class="tip" hidden></div>`;
   const tip=el.querySelector(".tip"),svg=el.querySelector("svg");
-  const show=i=>{const d=data[i],r=svg.getBoundingClientRect(),sc=r.width/W,cx=(P.l+band*i+band/2)*sc,yy=(d.v?y(d.v):P.t+ih)*sc;
-    tip.innerHTML=tipFn(d);tip.hidden=false;tip.style.left=Math.min(Math.max(cx,70),r.width-70)+"px";tip.style.top=(yy-8)+"px"};
+  const show=i=>{const d=data[i],r=svg.getBoundingClientRect(),sc=r.width/W,cx=(P.l+band*i+band/2)*sc,yy=(d.total?y(d.total):P.t+ih)*sc;
+    tip.innerHTML=d.tip;tip.hidden=false;tip.style.left=Math.min(Math.max(cx,90),r.width-90)+"px";tip.style.top=(yy-10)+"px"};
   el.querySelectorAll(".hit").forEach(h=>{const i=+h.dataset.i;
     h.addEventListener("mouseenter",()=>show(i));h.addEventListener("focus",()=>show(i));
     h.addEventListener("mouseleave",()=>tip.hidden=true);h.addEventListener("blur",()=>tip.hidden=true);
-    h.addEventListener("click",()=>{sel=weeks[i];$("weekSel").value=sel;render()})});
+    if(clickable){const go=()=>{sel=weeks[i];render()};h.addEventListener("click",go);h.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}})}});
+}
+const key=(cls,label,v)=>`<span><i style="background:var(--s-${cls})${cls==="none"?";opacity:.55":""}"></i>${label} ${v}</span><br>`;
+
+function delivery(k){
+  const wk=p=>`<b>${esc(weekLabel(p.w))}</b>`;
+  columnChart($("chThru"),k.perWeek.map(p=>({label:fmtDay(p.w),total:p.delivered,on:p.w===sel,
+    segs:[{v:p.onTime,cls:"on"},{v:p.late,cls:"late"},{v:p.noDl,cls:"none"}],
+    tip:`${wk(p)}${p.delivered} delivered<br>${key("on","On time",p.onTime)}${key("late","Late",p.late)}${key("none","No deadline",p.noDl)}`})),{H:250});
+  columnChart($("chOnTime"),k.perWeek.map(p=>({label:fmtDay(p.w),total:p.rate==null?null:p.rate*100,on:p.w===sel,capText:pctText(p.rate),
+    segs:[{v:p.rate==null?0:p.rate*100,cls:"on"}],tip:`${wk(p)}${p.withDl?`${pctText(p.rate)} on time (${p.onTime} of ${p.withDl})`:"No deliveries with a deadline"}`})),{max:100,fmt:v=>Math.round(v)+"%"});
+  const cmax=Math.max(4,...k.perWeek.map(p=>p.cycle||0));
+  columnChart($("chCycle"),k.perWeek.map(p=>({label:fmtDay(p.w),total:p.cycle,on:p.w===sel,capText:daysText(p.cycle),
+    segs:[{v:p.cycle||0,cls:"on"}],tip:`${wk(p)}${p.cycleN?`Median ${daysText(p.cycle)} across ${plural(p.cycleN,"collab")}`:"No deliveries"}`})),{max:Math.ceil(cmax/4)*4,fmt:v=>Math.round(v)+"d"});
+  $("tbThru").innerHTML=table(k.perWeek.slice().reverse(),[
+    {h:"Week",f:p=>esc(weekLabel(p.w))},{h:"Delivered",n:1,f:p=>p.delivered},{h:"On time",n:1,f:p=>p.onTime},{h:"Late",n:1,f:p=>p.late},
+    {h:"No deadline",n:1,f:p=>p.noDl},{h:"Rate",n:1,f:p=>pctText(p.rate)},{h:"Cycle (median)",n:1,f:p=>daysText(p.cycle)}]);
 }
 
-function charts(k){
-  const thru=k.perWeek.map(p=>({label:shortWeek(p.w),v:p.delivered,on:p.w===sel,p}));
-  columnChart($("chThru"),thru,{fmt:v=>String(Math.round(v)),tipFn:d=>`<b>${esc(weekLabel(d.p.w))}</b>${d.v} delivered`});
-  const ot=k.perWeek.map(p=>({label:shortWeek(p.w),v:p.rate==null?null:p.rate*100,on:p.w===sel,p}));
-  columnChart($("chOnTime"),ot,{max:100,fmt:v=>Math.round(v)+"%",tipFn:d=>`<b>${esc(weekLabel(d.p.w))}</b>${d.p.withDl?`${pctText(d.p.rate)} on time (${d.p.onTime} of ${d.p.withDl})`:"No deliveries with a deadline"}`});
-  const head=`<table><thead><tr><th>Week</th><th class="n">Delivered</th><th class="n">On time</th><th class="n">Rate</th></tr></thead><tbody>`;
-  const body=k.perWeek.map(p=>`<tr><td>${esc(weekLabel(p.w))}</td><td class="n">${p.delivered}</td><td class="n">${p.onTime} / ${p.withDl}</td><td class="n">${pctText(p.rate)}</td></tr>`).join("");
-  $("tbThru").innerHTML=$("tbOnTime").innerHTML=head+body+"</tbody></table>";
+function comingUp(k){
+  const late=k.late.length;
+  $("comingNote").textContent=`Open collabs only, by deadline day.${late?` Plus ${plural(late,"collab")} already past deadline (see Watchlist).`:""}`;
+  columnChart($("chDue"),k.upcoming.map((u,i)=>({label:i===0?"Today":fmtDow(u.day),sub:fmtDay(u.day),total:u.items.length,on:i===0,capAll:true,
+    segs:[{v:u.items.length,cls:"on"}],tip:`<b>${i===0?"Today, ":""}${fmtDow(u.day)} ${fmtDay(u.day)}</b>${u.items.length?plural(u.items.length,"collab")+" due":"Nothing due"}${u.items.slice(0,4).map(r=>"<br>"+esc(r.name)).join("")}${u.items.length>4?"<br>…":""}`})),
+    {H:230,clickable:false,capAll:true,boldLabel:true});
+  const soon=k.active.filter(r=>r.deadline!=null&&r.deadline>=k.today&&r.deadline<k.today+7).sort((a,b)=>a.deadline-b.deadline||(b.days??0)-(a.days??0));
+  $("dueList").innerHTML=table(soon,[
+    {h:"Collab",f:r=>link(r)+(r.creator?`<span class="sub">${esc(r.creator)}</span>`:"")},
+    {h:"Stage",f:r=>esc(r.stage)+(r.sub?`<span class="sub">${esc(r.sub)}</span>`:"")},
+    {h:"Due",n:1,f:r=>{const l=r.deadline-k.today;return`${fmtDay(r.deadline)}<span class="sub">${l===0?"Today":l===1?"Tomorrow":"in "+l+" days"}</span>`}},
+    {h:"In stage",n:1,o:1,f:r=>r.days==null?"–":r.days+"d"}],"Nothing due in the next 7 days.");
 }
 
-function pipeline(k){
+function hbar(name,dot,parts,max,val){
+  const fills=parts.filter(p=>p.v>0).map(p=>`<span class="fill${p.cls?" "+p.cls:""}" style="width:${p.v/max*100}%"></span>`).join("");
+  return`<div class="hb"><span class="sn">${dot?`<i style="background:${dot}"></i>`:""}${esc(name)}</span><span class="track">${fills}</span><span class="val">${val}</span></div>`;
+}
+function workload(k){
   const by={};k.active.forEach(r=>(by[r.stage]=by[r.stage]||[]).push(r));
   const stages=Object.keys(by).sort((a,b)=>{const ia=STAGE_ORDER.indexOf(a),ib=STAGE_ORDER.indexOf(b);return(ia<0?99:ia)-(ib<0?99:ib)});
   const max=Math.max(1,...stages.map(s=>by[s].length));
-  $("pipeline").innerHTML=stages.length?stages.map(s=>`<div class="hb"><span class="sn"><i style="background:${STAGE_HEX[s]||"#8C93B4"}"></i>${esc(s)}</span>
-    <span class="track"><span class="fill" style="display:block;width:${by[s].length/max*100}%"></span></span>
-    <span class="val"><b>${by[s].length}</b> · ${avgDays(by[s])}</span></div>`).join(""):'<p class="hint">No active collabs.</p>';
+  $("pipeline").innerHTML=stages.length?stages.map(s=>{const l=by[s],old=l.filter(r=>(r.days??0)>=5).length;
+    return hbar(s,STAGE_HEX[s]||"#8C93B4",[{v:l.length}],max,`<b>${l.length}</b> · ${avgDays(l)}${old?` · ${old} at 5d+`:""}`)}).join(""):'<p class="empty-note">No active collabs.</p>';
+  const lateIds=new Set(k.late.map(r=>r.id)),bc={};
+  k.active.forEach(r=>{const x=bc[r.client]=bc[r.client]||{n:0,late:0};x.n++;if(lateIds.has(r.id))x.late++});
+  const clients=Object.entries(bc).sort((a,b)=>b[1].n-a[1].n||a[0].localeCompare(b[0]));
+  const cmax=Math.max(1,...clients.map(c=>c[1].n));
+  $("byClientNow").innerHTML=clients.length?clients.slice(0,10).map(([c,x])=>hbar(c,"",[{v:x.n-x.late},{v:x.late,cls:"late"}],cmax,`<b>${x.n}</b>${x.late?` · ${x.late} late`:""}`)).join("")+
+    (clients.length>10?`<p class="empty-note">+ ${plural(clients.length-10,"more client")}</p>`:""):'<p class="empty-note">No active collabs.</p>';
 }
 
-function itemTable(list,cols){
-  if(!list.length)return'<p class="hint">Nothing here.</p>';
-  return`<table><thead><tr>${cols.map(c=>`<th${c.n?' class="n"':""}>${c.h}</th>`).join("")}</tr></thead><tbody>${list.map(r=>`<tr>${cols.map(c=>`<td${c.n?' class="n"':""}>${c.f(r)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
-}
-const link=r=>r.url?`<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.name)}</a>`:esc(r.name);
-
-function lists(k){
-  /* client review: grouped by client */
+function watchlist(k){
+  const late=k.late.slice().sort((a,b)=>a.deadline-b.deadline).slice(0,10);
+  $("lateList").innerHTML=table(late,[
+    {h:"Collab",f:r=>link(r)+(r.creator?`<span class="sub">${esc(r.creator)}</span>`:"")},
+    {h:"Stage",f:r=>esc(r.stage)+(r.sub?`<span class="sub">${esc(r.sub)}</span>`:"")},
+    {h:"Late by",n:1,f:r=>`<span class="pill-late">${k.today-r.deadline}d</span><span class="sub">due ${fmtDay(r.deadline)}</span>`}],"Nothing past deadline. Nice.");
   const byC={};k.cr.forEach(r=>(byC[r.client]=byC[r.client]||[]).push(r));
   const crRows=Object.entries(byC).map(([c,l])=>({c,n:l.length,avg:avgDays(l),max:Math.max(...l.map(r=>r.days??0))})).sort((a,b)=>b.max-a.max);
-  $("crw").innerHTML=crRows.length?`<table><thead><tr><th>Client</th><th class="n">Collabs</th><th class="n">Avg wait</th><th class="n">Longest</th></tr></thead><tbody>${
-    crRows.map(x=>`<tr><td>${esc(x.c)}</td><td class="n">${x.n}</td><td class="n">${x.avg}</td><td class="n">${x.max}d</td></tr>`).join("")}</tbody></table>`:'<p class="hint">Nothing waiting on clients.</p>';
-  /* oldest in stage */
+  $("crw").innerHTML=table(crRows,[{h:"Client",f:x=>esc(x.c)},{h:"Collabs",n:1,f:x=>x.n},{h:"Avg wait",n:1,f:x=>x.avg},{h:"Longest",n:1,f:x=>x.max+"d"}],"Nothing waiting on clients.");
   const old=k.active.filter(r=>r.days!=null).sort((a,b)=>b.days-a.days).slice(0,8);
-  $("oldest").innerHTML=itemTable(old,[{h:"Collab",f:link},{h:"Stage",f:r=>esc(r.stage)},{h:"Days",n:1,f:r=>r.days+"d"}]);
-  /* delivered this week by client */
+  $("oldest").innerHTML=table(old,[{h:"Collab",f:link},{h:"Stage",f:r=>esc(r.stage)+(r.sub?`<span class="sub">${esc(r.sub)}</span>`:"")},{h:"Days",n:1,f:r=>r.days+"d"}]);
   const cur=k.perWeek[weeks.indexOf(sel)];
   $("byClientHint").textContent=`Week of ${weekLabel(sel)}.`;
   const dc={};cur.items.forEach(r=>{const x=dc[r.client]=dc[r.client]||{n:0,on:0,dl:0};x.n++;if(r.deadline!=null){x.dl++;if(r.stageStart<=r.deadline)x.on++}});
-  const dcRows=Object.entries(dc).sort((a,b)=>b[1].n-a[1].n);
-  $("byClient").innerHTML=dcRows.length?`<table><thead><tr><th>Client</th><th class="n">Delivered</th><th class="n">On time</th></tr></thead><tbody>${
-    dcRows.map(([c,x])=>`<tr><td>${esc(c)}</td><td class="n">${x.n}</td><td class="n">${x.dl?`${x.on} / ${x.dl}`:"–"}</td></tr>`).join("")}</tbody></table>`:'<p class="hint">Nothing delivered this week yet.</p>';
+  $("byClient").innerHTML=table(Object.entries(dc).sort((a,b)=>b[1].n-a[1].n),[
+    {h:"Client",f:([c])=>esc(c)},{h:"Delivered",n:1,f:([,x])=>x.n},{h:"On time",n:1,f:([,x])=>x.dl?`${x.on} / ${x.dl}`:"–"}],"Nothing delivered this week yet.");
 }
 
 function render(){
-  if(!rows)return;
   const k=compute();
   $("weekSel").innerHTML=weeks.slice().reverse().map(w=>`<option value="${w}"${w===sel?" selected":""}>${w===weeks[7]?"This week · ":w===weeks[6]?"Last week · ":""}${esc(weekLabel(w))}</option>`).join("");
-  tiles(k);charts(k);pipeline(k);lists(k);
+  tiles(k);delivery(k);comingUp(k);workload(k);watchlist(k);
 }
 $("weekSel").onchange=e=>{sel=+e.target.value;render()};
+/* charts are drawn at their card's width, so redraw when that changes */
+let rsT,lastW=0;addEventListener("resize",()=>{clearTimeout(rsT);rsT=setTimeout(()=>{const w=$("chThru").clientWidth;if(rows.length&&w!==lastW){lastW=w;render()}},150)});
 
 /* ---------- loading & auth (same API and session as the digest) ---------- */
-async function api(path,body){
-  let r;
-  try{r=await fetch(path,{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify(body||{})})}
-  catch(e){throw{code:"server_unavailable"}}
-  const data=await r.json().catch(()=>({}));
-  if(!r.ok)throw data.error||{code:"server_unavailable",message:"HTTP "+r.status};
-  return data;
-}
 function errCopy(e){
   switch(e&&e.code){
     case"no_monday_user":return(e.message||"Your Google email doesn't match a Monday.com user.")+" Ask Tessa to check.";

@@ -9,7 +9,7 @@ const COL = {
 };
 const SUB_IDS = ["color_mm26m684", "color_mm265k74", "color_mm266ame", "color_mm26y3mc", "color_mm57fna8", "color_mm26qtzn"];
 const COL_IDS = JSON.stringify([...Object.values(COL), ...SUB_IDS]);
-const ITEM_FIELDS = `id name url updated_at column_values(ids:${COL_IDS}){ id text ... on BoardRelationValue { display_value } ... on FormulaValue { display_value } }`;
+const ITEM_FIELDS = `id name url created_at updated_at column_values(ids:${COL_IDS}){ id text ... on BoardRelationValue { display_value } ... on FormulaValue { display_value } }`;
 const MAX_PAGES = 6;
 
 // compare_value is a custom scalar in Monday's schema, so the person id is written into the query
