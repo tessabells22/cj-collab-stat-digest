@@ -118,24 +118,47 @@ async function api(path,body){
   if(!r.ok)throw data.error||{code:"server_unavailable",message:"HTTP "+r.status};
   return data;
 }
-async function loadUpdates(list,cache){
-  const need=list.filter(it=>{const c=cache.get(it.id);return!c||c.updated_at!==it.updated_at}).map(it=>it.id);
-  for(let i=0;i<need.length;i+=50){
-    const p=await api("/api/monday",{op:"updates",ids:need.slice(i,i+50)});
-    (p.items||[]).forEach(x=>cache.set(String(x.id),{updated_at:x.updated_at,updates:x.updates||[]}));
-  }
+/* Active collabs + their latest updates in one request. prev is the last raw copy (or null): updates
+   for items that haven't changed since are reused, and only the changed ones are re-read on the server. */
+async function fetchDigestRaw(prev,fresh){
+  const have={};
+  if(prev&&prev.items)prev.items.forEach(it=>{const id=String(it.id);if(prev.updates&&prev.updates[id])have[id]=it.updated_at});
+  const p=await api("/api/monday",{op:"digest",have,fresh:!!fresh});
+  const got=new Set((p.fetched||[]).map(String)),updates={};
+  (p.items||[]).forEach(it=>{const id=String(it.id);updates[id]=got.has(id)?(p.updates[id]||[]):(prev&&prev.updates&&prev.updates[id])||[]});
+  return{me:p.me,items:p.items||[],updates};
 }
-/* list + latest posts → {me, groups, dropped}. cache: Map of item id → {updated_at, updates}, reused across refreshes */
-async function fetchCollabs(cache){
-  const p=await api("/api/monday",{op:"list"});
-  const items=(p.items||[]).map(it=>({...it,id:String(it.id)}));
-  /* skip post lookups for collabs already finished by their stage */
+/* raw → {me, groups, dropped} with the digest's rules */
+function groupDigest(raw){
+  const items=(raw.items||[]).map(it=>({...it,id:String(it.id)}));
   const active=items.filter(it=>{const s=cv(it,COL.stage);return!finishedByColumns(s,SUB[s]?cv(it,SUB[s]):"")});
-  await loadUpdates(active,cache);
   const groups=Object.fromEntries(GROUPS.map(g=>[g.key,[]]));
   let dropped=items.length-active.length;
-  active.forEach(it=>{const row=buildRow(it,(cache.get(it.id)||{}).updates,p.me);if(row)groups[row.group].push(row);else dropped++});
-  return{me:p.me,groups,dropped};
+  active.forEach(it=>{const row=buildRow(it,raw.updates[it.id],raw.me);if(row)groups[row.group].push(row);else dropped++});
+  return{me:raw.me,groups,dropped};
+}
+async function fetchCollabs(){return groupDigest(await fetchDigestRaw(null,false))}
+const fetchKpiRaw=fresh=>api("/api/monday",{op:"kpi",fresh:!!fresh});
+
+/* ---------- saved copies: pages show the last data at once, then swap in the fresh read ---------- */
+const CACHE_PREFIX="cd.cache.v2:";
+function cacheRead(kind){try{const c=JSON.parse(localStorage.getItem(CACHE_PREFIX+kind)||"null");return c&&Date.now()-c.at<864e5?c:null}catch(e){return null}}
+function cacheWrite(kind,email,data){try{localStorage.setItem(CACHE_PREFIX+kind,JSON.stringify({at:Date.now(),email,data}))}catch(e){}}
+const savedAgo=at=>{const m=Math.round((Date.now()-at)/6e4);return m<1?"just now":m<60?m+" min ago":Math.round(m/60)+" h ago"};
+/* Starts the fresh read straight away (alongside the sign-in check), renders the saved copy for this
+   user if there is one, then renders the fresh data. render(data, {cached, at}). Throws on load errors.
+   Returns the config, or {signedIn:false} when the gate should show. */
+async function swr(kind,loader,render){
+  const saved=cacheRead(kind);
+  const freshP=loader(saved&&saved.data);freshP.catch(()=>{});
+  const cfg=await Shell.config;
+  if(!cfg.signedIn)return cfg;
+  swr.email=cfg.user.email;
+  document.getElementById("app").hidden=false;
+  if(saved&&saved.email===swr.email)render(saved.data,{cached:true,at:saved.at});
+  const fresh=await freshP;
+  cacheWrite(kind,swr.email,fresh);render(fresh,{cached:false,at:Date.now()});
+  return cfg;
 }
 
 /* ---------- handled marks (saved per browser under cd.handled) ---------- */

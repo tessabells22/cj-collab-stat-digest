@@ -190,21 +190,36 @@ $("onlyActive").onchange=e=>{onlyActive=e.target.checked;store.set("cr.active",o
 function showNote(t,err){const n=$("note");n.textContent=t;n.className="note"+(err?" err":"");n.hidden=!t}
 function showGate(msg){if(window.Shell)Shell.setUser(null);$("app").hidden=true;$("gate").hidden=false;$("gateErr").textContent=msg||"";$("gateErr").hidden=!msg}
 $("signout").onclick=async()=>{try{await api("/api/auth/logout")}catch(e){}showGate("")};
-const cache=new Map();let busy=false;
-async function load(){
-  if(busy)return;busy=true;const b=$("refresh");b.disabled=true;b.classList.add("spin");$("freshText").textContent="Loading your creators…";
-  try{
-    const [cur,hist]=await Promise.all([fetchCollabs(cache),api("/api/monday",{op:"kpi"})]);
-    people=build(Object.values(cur.groups).flat(),hist.items||[]);
-    showNote("");render();
-    $("freshText").textContent=`${people.filter(p=>p.active.length).length} creators · updated `+new Date().toLocaleTimeString("en-US",{timeZone:tz,hour:"numeric",minute:"2-digit"});
-  }catch(e){
-    if(e&&e.code==="not_signed_in"){showGate("Your session ended. Sign in again.");return}
-    $("freshText").textContent="Couldn't load";showNote(e&&e.code==="no_monday_user"?"Your Google email doesn't match a Monday.com user. Ask Tessa to check.":"Couldn't load from Monday.com. Press Refresh to try again.",true);
-  }finally{busy=false;b.disabled=false;b.classList.remove("spin")}
+/* two reads (active collabs + recent history), each shown from its saved copy first, then fresh */
+let dig=null,kpi=null,digMeta=null,kpiMeta=null,busy=false;
+function onBoth(){
+  if(!dig||!kpi)return;
+  people=build(Object.values(groupDigest(dig).groups).flat(),kpi.items||[]);
+  showNote("");render();
+  const cachedAt=[digMeta,kpiMeta].filter(m=>m.cached).map(m=>m.at);
+  $("freshText").textContent=`${people.filter(p=>p.active.length).length} creators · `+(cachedAt.length?`saved ${savedAgo(Math.min(...cachedAt))}, refreshing…`:"updated "+new Date().toLocaleTimeString("en-US",{timeZone:tz,hour:"numeric",minute:"2-digit"}));
 }
-$("refresh").onclick=load;
-(async()=>{const cfg=await Shell.config;if(!cfg.signedIn){showGate("");return}$("app").hidden=false;load()})();
+function loadErr(e){
+  if(e&&e.code==="not_signed_in"){showGate("Your session ended. Sign in again.");return}
+  if(people.length){$("freshText").textContent+=" · couldn't refresh";return}
+  $("freshText").textContent="Couldn't load";showNote(e&&e.code==="no_monday_user"?"Your Google email doesn't match a Monday.com user. Ask Tessa to check.":"Couldn't load from Monday.com. Press Refresh to try again.",true);
+}
+async function refreshNow(){
+  if(busy)return;busy=true;const b=$("refresh");b.disabled=true;b.classList.add("spin");$("freshText").textContent="Refreshing…";
+  try{
+    const [d,k]=await Promise.all([fetchDigestRaw(dig,true),fetchKpiRaw(true)]);
+    dig=d;kpi=k;digMeta=kpiMeta={cached:false,at:Date.now()};
+    cacheWrite("digest",swr.email,d);cacheWrite("kpi",swr.email,k);onBoth();
+  }catch(e){loadErr(e)}finally{busy=false;b.disabled=false;b.classList.remove("spin")}
+}
+$("refresh").onclick=refreshNow;
+(async()=>{
+  const both=Promise.all([
+    swr("digest",prev=>fetchDigestRaw(prev,false),(d,m)=>{dig=d;digMeta=m;onBoth()}),
+    swr("kpi",()=>fetchKpiRaw(false),(k,m)=>{kpi=k;kpiMeta=m;onBoth()}),
+  ]);
+  try{const [cfg]=await both;if(!cfg.signedIn)showGate("")}catch(e){loadErr(e)}
+})();
 </script>
 </body>
 </html>

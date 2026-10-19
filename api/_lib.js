@@ -55,8 +55,8 @@ export function redirectUri(request) {
 const b64 = (s) => Buffer.from(s).toString("base64url");
 const sign = (data) => createHmac("sha256", process.env.SESSION_SECRET).update(data).digest("base64url");
 
-export function sessionCookie({ email, name }) {
-  const payload = b64(JSON.stringify({ email, name, exp: Date.now() + SESSION_DAYS * 864e5 }));
+export function sessionCookie({ email, name, mid, mname }) {
+  const payload = b64(JSON.stringify({ email, name, mid, mname, exp: Date.now() + SESSION_DAYS * 864e5 }));
   return setCookie(SESSION_COOKIE, `${payload}.${sign(payload)}`, SESSION_DAYS * 86400);
 }
 
@@ -124,6 +124,13 @@ export async function mondayUser(email) {
   if (!user) throw new AppError("no_monday_user", `No Monday.com user has the email ${email}.`, 403);
   userCache.set(key, { user, at: Date.now() });
   return user;
+}
+
+/* The Monday user for a session. Sign-in stores the Monday id in the session, which saves a Monday
+   lookup on every request; older sessions without it fall back to the email lookup. */
+export function sessionUser(session) {
+  if (session.mid && /^\d+$/.test(String(session.mid))) return Promise.resolve({ id: String(session.mid), name: session.mname || session.name, email: session.email });
+  return mondayUser(session.email);
 }
 
 export function errorResponse(e) {

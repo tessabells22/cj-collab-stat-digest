@@ -13,12 +13,13 @@ const MAX_PAGES = 6;
 
 // compare_value is a custom scalar in Monday's schema, so the person id is written into the query
 // (it's a numeric Monday user id, checked below) instead of passed as a typed variable.
-// Stage label keys: 0 = Canceled, 14 = Completed. The digest skips both; the KPI page keeps Completed.
-const DIGEST_EXCLUDE = [0, 14];
-const KPI_EXCLUDE = [0];
-const listQuery = (userId, exclude) => `query($board:[ID!]){ boards(ids:$board){ items_page(limit:500, query_params:{rules:[
-  {column_id:"${COL.cfs}", compare_value:["person-${userId}"], operator:any_of},
-  {column_id:"${COL.stage}", compare_value:${JSON.stringify(exclude)}, operator:not_any_of}]}){ cursor items{ ${ITEM_FIELDS} } } } }`;
+// Stage label keys: 0 = Canceled, 13 = Approved, 14 = Completed.
+const HISTORY_DAYS = 180;
+const ruleCfs = (userId) => `{column_id:"${COL.cfs}", compare_value:["person-${userId}"], operator:any_of}`;
+const ACTIVE_RULES = (userId) => `${ruleCfs(userId)}, {column_id:"${COL.stage}", compare_value:[0,14], operator:not_any_of}`;
+const HISTORY_RULES = (userId, from) => `${ruleCfs(userId)}, {column_id:"${COL.stage}", compare_value:[13,14], operator:any_of}` +
+  (from ? `, {column_id:"${COL.stageStart}", compare_value:["${from}","2099-12-31"], operator:between}` : "");
+const pageQuery = (rules) => `query($board:[ID!]){ boards(ids:$board){ items_page(limit:500, query_params:{rules:[${rules}]}){ cursor items{ ${ITEM_FIELDS} } } } }`;
 const NEXT_Q = `query($cursor:String!){ next_items_page(limit:500, cursor:$cursor){ cursor items{ ${ITEM_FIELDS} } } }`;
 const UPD_Q = `query($ids:[ID!]){ items(ids:$ids, limit:100){ id updated_at
   column_values(ids:["${COL.cfs}"]){ ... on PeopleValue { persons_and_teams { id kind } } }
@@ -27,11 +28,10 @@ const UPD_Q = `query($ids:[ID!]){ items(ids:$ids, limit:100){ id updated_at
 export const isCfs = (item, userId) =>
   (item.column_values || []).some((c) => (c.persons_and_teams || []).some((p) => p.kind === "person" && String(p.id) === String(userId)));
 
+const checkId = (userId) => { if (!/^\d+$/.test(String(userId))) throw new AppError("tool_error", "Monday.com returned an unexpected user id.", 502); };
 
-/* All of a person's collabs as CFS. kind "digest" skips Canceled and Completed; "kpi" keeps Completed. */
-export async function listItems(userId, kind = "digest") {
-  if (!/^\d+$/.test(String(userId))) throw new AppError("tool_error", "Monday.com returned an unexpected user id.", 502);
-  const data = await monday(listQuery(userId, kind === "kpi" ? KPI_EXCLUDE : DIGEST_EXCLUDE), { board: [BOARD] });
+async function pageAll(rules) {
+  const data = await monday(pageQuery(rules), { board: [BOARD] });
   const page = ((data.boards || [])[0] || {}).items_page || {};
   const items = [...(page.items || [])];
   let cursor = page.cursor;
@@ -43,8 +43,58 @@ export async function listItems(userId, kind = "digest") {
   return items;
 }
 
+/* Short per-instance cache so moving between pages doesn't re-read Monday each time. Refresh bypasses it. */
+const memo = new Map();
+const MEMO_MS = 45_000;
+async function cached(key, fresh, load) {
+  const hit = memo.get(key);
+  if (!fresh && hit && Date.now() - hit.at < MEMO_MS) return hit.value;
+  const value = await load();
+  memo.set(key, { at: Date.now(), value });
+  if (memo.size > 200) memo.delete(memo.keys().next().value);
+  return value;
+}
+
+/* Active collabs (everything but Canceled and Completed). */
+export function activeItems(userId, { fresh = false } = {}) {
+  checkId(userId);
+  return cached(`active:${userId}`, fresh, () => pageAll(ACTIVE_RULES(userId)));
+}
+
+/* Active collabs plus Approved/Completed ones that finished in the last 180 days, for KPIs and Creators.
+   If Monday rejects the date filter, fall back to the full history rather than failing the page. */
+export function kpiItems(userId, { fresh = false } = {}) {
+  checkId(userId);
+  return cached(`kpi:${userId}`, fresh, async () => {
+    const from = new Date(Date.now() - HISTORY_DAYS * 864e5).toISOString().slice(0, 10);
+    const history = pageAll(HISTORY_RULES(userId, from)).catch((e) => {
+      if (e.code !== "tool_error") throw e;
+      console.warn("history date filter rejected, reading full history:", e.message);
+      return pageAll(HISTORY_RULES(userId, null));
+    });
+    const [active, done] = await Promise.all([activeItems(userId, { fresh }), history]);
+    const seen = new Set(active.map((it) => String(it.id)));
+    return [...active, ...done.filter((it) => !seen.has(String(it.id)))];
+  });
+}
+
+/* Back-compat for the briefing: "digest" = active, "kpi" = active + recent history. */
+export const listItems = (userId, kind = "digest") => (kind === "kpi" ? kpiItems(userId) : activeItems(userId));
+
 /* Latest updates for up to 100 items, keeping only items where userId is the CFS. */
 export async function updatesFor(ids, userId) {
   const data = await monday(UPD_Q, { ids });
   return (data.items || []).filter((it) => isCfs(it, userId)).map(({ column_values, ...it }) => it);
+}
+
+/* Updates for many items: batches of 50, up to six at once. Returns {id: updates[]}. */
+export async function updatesMap(ids, userId) {
+  const batches = [];
+  for (let i = 0; i < ids.length; i += 50) batches.push(ids.slice(i, i + 50));
+  const out = {};
+  for (let i = 0; i < batches.length; i += 6) {
+    const results = await Promise.all(batches.slice(i, i + 6).map((b) => updatesFor(b, userId)));
+    results.flat().forEach((x) => { out[String(x.id)] = x.updates || []; });
+  }
+  return out;
 }

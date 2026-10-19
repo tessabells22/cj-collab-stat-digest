@@ -79,12 +79,13 @@
 <script src="/collabs.js"></script>
 <script>
 (async()=>{
+  loadToday();   /* starts the Monday read now, alongside the sign-in check */
   const cfg=await Shell.config;
   const qs=new URLSearchParams(location.search),authErr=qs.get("auth_error");
   if(authErr)history.replaceState(null,"",location.pathname);
   const AUTH_ERR={denied:"Google sign-in was cancelled.",state:"Sign-in took too long. Try again.",exchange:"Google sign-in failed. Try again.",
     wrong_domain:"Use your company Google account. Personal Gmail accounts can't sign in.",not_configured:"Sign-in isn't set up yet."};
-  if(cfg.signedIn){document.getElementById("app").hidden=false;loadToday();showBriefing(cfg);return}
+  if(cfg.signedIn){showBriefing(cfg);return}
   let msg=authErr?(AUTH_ERR[authErr]||"Sign-in failed."):"";
   if(cfg.missing&&cfg.missing.length)msg=msg||"Sign-in isn't set up yet. Missing in Vercel: "+cfg.missing.join(", ")+".";
   const err=document.getElementById("gateErr");err.textContent=msg;err.hidden=!msg;
@@ -109,16 +110,30 @@ const $=id=>document.getElementById(id);
 const GROUP=Object.fromEntries(GROUPS.map((g,i)=>({...g,i})).map(g=>[g.key,g]));
 const BIG=["needsYou","dueToday","late"];
 const SMALL=[["waiting","waiting on client"],["stuck","stuck 5d+"],["changed","changed in 24h"]];
+let shown=false;
 async function loadToday(){
   try{
-    const r=await fetchCollabs(new Map());
+    await swr("digest",prev=>fetchDigestRaw(prev,false),(raw,meta)=>{renderToday(groupDigest(raw),meta);shown=true});
+  }catch(e){
+    if(e&&e.code==="not_signed_in"){location.reload();return}
+    if(shown){$("todayWhen").textContent+=" · couldn't refresh";return}
+    const msg=e&&e.code==="no_monday_user"?"Your Google email doesn't match a Monday.com user. Ask Tessa to check.":
+      e&&e.code==="monday_token"?"The site's Monday.com connection stopped working. Ask Tessa to update the token.":
+      "Couldn't load today's numbers from Monday.com. Open My collabs or try again in a minute.";
+    $("todayWhen").textContent="Not loaded";$("counts").innerHTML="";$("todayMeta").innerHTML="";
+    $("next").innerHTML=`<p class="empty-day">${esc(msg)}</p>`;
+  }
+}
+function renderToday(r,meta){
+  {
     const handled=readHandled();
     /* same counts as the digest chips: collabs you marked handled are left out */
     const groups=Object.fromEntries(Object.entries(r.groups).map(([k,l])=>[k,l.filter(it=>!isHandledIn(handled,it))]));
     const active=Object.values(groups).flat();
     const first=(r.me&&r.me.name||"").split(" ")[0];
     $("todayTitle").textContent=first?`${first}'s day`:"Your day";
-    $("todayWhen").textContent=new Date().toLocaleDateString("en-US",{timeZone:tz,weekday:"short",month:"short",day:"numeric"})+" · updated "+new Date().toLocaleTimeString("en-US",{timeZone:tz,hour:"numeric",minute:"2-digit"});
+    $("todayWhen").textContent=new Date().toLocaleDateString("en-US",{timeZone:tz,weekday:"short",month:"short",day:"numeric"})+
+      (meta.cached?` · saved ${savedAgo(meta.at)}, refreshing…`:" · updated "+new Date(meta.at).toLocaleTimeString("en-US",{timeZone:tz,hour:"numeric",minute:"2-digit"}));
     $("counts").innerHTML=BIG.map(k=>{const n=groups[k].length,g=GROUP[k];
       return`<a class="count${n?"":" zero"}" href="/digest?tab=${k}" style="--k:${g.c}"><b>${n}</b><span>${esc(g.label)}</span></a>`}).join("");
     $("todayMeta").innerHTML=`<span>${active.length} active collab${active.length===1?"":"s"}</span>`+
@@ -130,13 +145,6 @@ async function loadToday(){
       <span class="n" title="${esc(it.name)}">${esc(it.name)}</span><span class="r">${esc(it.reason||GROUP[it.group].label)}</span>
       ${it.url?`<a href="${esc(it.url)}" target="_blank" rel="noopener">Monday ↗</a>`:""}</div>`).join(""):
       `<p class="empty-day">Nothing needs you, nothing due today and nothing late. Nice.</p>`;
-  }catch(e){
-    if(e&&e.code==="not_signed_in"){location.reload();return}
-    const msg=e&&e.code==="no_monday_user"?"Your Google email doesn't match a Monday.com user. Ask Tessa to check.":
-      e&&e.code==="monday_token"?"The site's Monday.com connection stopped working. Ask Tessa to update the token.":
-      "Couldn't load today's numbers from Monday.com. Open My collabs or try again in a minute.";
-    $("todayWhen").textContent="Not loaded";$("counts").innerHTML="";$("todayMeta").innerHTML="";
-    $("next").innerHTML=`<p class="empty-day">${esc(msg)}</p>`;
   }
 }
 </script>
