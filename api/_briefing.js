@@ -6,7 +6,7 @@ import path from "node:path";
 import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 import { mondayUser, allowedDomain, AppError } from "./_lib.js";
-import { listItems, updatesFor } from "./_collabs.js";
+import { activeItems, updatesMap } from "./_collabs.js";
 
 export const slackEnabled = () => !!process.env.SLACK_BOT_TOKEN;
 const appUrl = () => (process.env.APP_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "")).replace(/\/$/, "");
@@ -25,12 +25,10 @@ function loadRules() {
 export async function buildBriefing(email) {
   const R = loadRules();
   const user = await mondayUser(email);
-  const items = (await listItems(user.id, "digest")).map((it) => ({ ...it, id: String(it.id) }));
+  const items = (await activeItems(user.id, { fresh: true })).map((it) => ({ ...it, id: String(it.id) }));
   const active = items.filter((it) => { const s = R.cv(it, R.COL.stage); return !R.finishedByColumns(s, R.SUB[s] ? R.cv(it, R.SUB[s]) : ""); });
-  const updates = new Map();
-  for (let i = 0; i < active.length; i += 50) {
-    (await updatesFor(active.slice(i, i + 50).map((x) => x.id), user.id)).forEach((x) => updates.set(String(x.id), x.updates || []));
-  }
+  const upd = await updatesMap(active.map((x) => x.id), user.id);
+  const updates = new Map(Object.entries(upd));
   const groups = Object.fromEntries(R.GROUPS.map((g) => [g.key, []]));
   active.forEach((it) => { const row = R.buildRow(it, updates.get(it.id), { id: user.id, name: user.name }); if (row) groups[row.group].push(row); });
   /* the three most urgent, in the digest's own order */

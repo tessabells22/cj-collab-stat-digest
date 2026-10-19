@@ -74,7 +74,9 @@ let view=store.get("cd.view")||"urgency",clientTab="all",special=null;
 let prevVisit=Number(store.get("cd.lastVisit"))||0;
 /* 3. handled marks: id -> {at, stage, sub}; back automatically when the collab changes */
 let handled={};try{handled=JSON.parse(store.get("cd.handled")||"{}")||{}}catch(e){handled={}}
-const updCache=new Map();   /* item id -> {updated_at, updates} so refreshes only re-read changed items */
+/* last raw read ({me, items, updates}); refreshes only re-read updates for items that changed since.
+   earlyP is the first read, started before the sign-in check returns; savedAt marks a saved copy on screen. */
+let rawDigest=null,earlyP=null,savedAt=0;
 $("sortSel").value=sort;
 {const qTab=new URLSearchParams(location.search).get("tab");
  if(GROUPS.some(g=>g.key===qTab)){tab=qTab;view="urgency";store.set("cd.tab",tab);store.set("cd.view",view);history.replaceState(null,"",location.pathname)}}
@@ -82,8 +84,14 @@ $("sortSel").value=sort;
 
 
 /* ---------- loading ---------- */
-async function handleList(){
-  const r=await fetchCollabs(updCache);
+async function handleList(fresh){
+  const raw=earlyP&&!fresh?await earlyP:await fetchDigestRaw(rawDigest,fresh);
+  earlyP=null;rawDigest=raw;savedAt=0;
+  if(cfg&&cfg.user)cacheWrite("digest",cfg.user.email,raw);
+  applyRaw(raw);
+}
+function applyRaw(raw){
+  const r=groupDigest(raw);
   me=r.me||me;
   if(me&&me.name)$("who").textContent=me.name.split(" ")[0];
   const groups=r.groups;
@@ -120,9 +128,9 @@ async function refresh(manual){
   if(!ready||busy)return;
   busy=true;lastTry=Date.now();
   const b=$("refresh");b.disabled=true;b.classList.add("spin");
-  if(manual||!lastAt)$("freshText").textContent=lastAt?"Refreshing…":"Loading your collabs…";
+  if(manual||!lastAt)$("freshText").textContent=lastAt?"Refreshing…":savedAt?`Saved copy from ${savedAgo(savedAt)} · refreshing…`:"Loading your collabs…";
   try{
-    await handleList();
+    await handleList(!!manual);
     lastAt=Date.now();                     /* stamp only after a successful fresh read */
     store.set("cd.lastVisit",String(lastAt)); /* next visit compares against now */
   }catch(e){onError(e)}
@@ -336,7 +344,7 @@ $("sortSel").onchange=e=>{sort=e.target.value;store.set("cd.sort",sort);render()
 /* ---------- sign in ---------- */
 let cfg={signedIn:false,ai:false,domain:"",missing:[]};
 function showSignIn(msg){
-  ready=false;current=null;lastAt=0;updCache.clear();
+  ready=false;current=null;lastAt=0;rawDigest=null;
   $("app").hidden=true;$("gate").hidden=false;if(window.Shell)Shell.setUser(null);
   if(cfg.domain)$("gateDomain").textContent="@"+cfg.domain;
   if(cfg.missing&&cfg.missing.length)msg=msg||"Sign-in isn't set up yet. Missing in Vercel: "+cfg.missing.join(", ")+".";
@@ -344,7 +352,10 @@ function showSignIn(msg){
 }
 function startDigest(){
   ready=true;$("gate").hidden=true;$("app").hidden=false;
-  $("main").innerHTML=`<div class="empty"><h3>Loading your collabs</h3><p>Reading the Production board items where you're the CFS. The first load takes a few seconds; refreshes after that are quick.</p></div>`;
+  /* show the last copy straight away while the fresh read finishes */
+  const saved=cacheRead("digest");
+  if(saved&&cfg.user&&saved.email===cfg.user.email){rawDigest=saved.data;savedAt=saved.at;applyRaw(saved.data)}
+  else $("main").innerHTML=`<div class="empty"><h3>Loading your collabs</h3><p>Reading the Production board items where you're the CFS. The first load takes a few seconds; refreshes after that are quick.</p></div>`;
   refresh(false);
 }
 $("signout").onclick=async()=>{try{await api("/api/auth/logout")}catch(e){}cfg.signedIn=false;showSignIn("")};
@@ -354,6 +365,7 @@ const AUTH_ERR={denied:"Google sign-in was cancelled.",state:"Sign-in took too l
 (async()=>{
   const qs=new URLSearchParams(location.search),authErr=qs.get("auth_error");
   if(authErr)history.replaceState(null,"",location.pathname);
+  {const saved=cacheRead("digest");earlyP=fetchDigestRaw(saved&&saved.data,false);earlyP.catch(()=>{})}   /* start reading Monday now */
   cfg=await Shell.config;
   aiOn=!!cfg.ai;
   if(cfg.domain)$("gateDomain").textContent="@"+cfg.domain;

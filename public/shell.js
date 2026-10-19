@@ -96,7 +96,12 @@
     setUser(user) {
       document.getElementById("signinLink").hidden = !!user;
       avatarBtn.hidden = !user;
-      if (!user) { menu.hidden = true; return; }
+      if (!user) {
+        menu.hidden = true;
+        /* signed out: drop the saved copies of this person's collabs */
+        try { Object.keys(localStorage).filter((k) => k.startsWith("cd.cache.")).forEach((k) => localStorage.removeItem(k)); } catch (e) {}
+        return;
+      }
       avatarBtn.textContent = initials(user.name || user.email);
       avatarBtn.setAttribute("aria-label", "Account: " + (user.name || user.email));
       document.getElementById("whoName").textContent = user.name || "";

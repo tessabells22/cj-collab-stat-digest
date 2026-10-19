@@ -406,27 +406,29 @@ function errCopy(e){
 }
 function showNote(t,err){const n=$("note");n.textContent=t;n.className="note"+(err?" err":"");n.hidden=!t}
 let busy=false;
-async function load(){
-  if(busy)return;busy=true;
-  const b=$("refresh");b.disabled=true;b.classList.add("spin");$("freshText").textContent="Loading your collabs…";
-  try{
-    const p=await api("/api/monday",{op:"kpi"});
-    me=p.me;rows=(p.items||[]).map(toRow);
-    if(me&&me.name)$("who").textContent=me.name.split(" ")[0]+"'s";
-    showNote("");render();
-    $("freshText").textContent="Updated "+new Date().toLocaleTimeString("en-US",{timeZone:tz,hour:"numeric",minute:"2-digit"})+` · ${rows.length} collabs`;
-  }catch(e){
-    if(e&&e.code==="not_signed_in"){showGate("Your session ended. Sign in again.");return}
-    showNote(errCopy(e),true);$("freshText").textContent="Couldn't load";
-  }finally{busy=false;b.disabled=false;b.classList.remove("spin")}
+function onData(p,meta){
+  me=p.me;rows=(p.items||[]).map(toRow);
+  if(me&&me.name)$("who").textContent=me.name.split(" ")[0]+"'s";
+  showNote("");render();
+  $("freshText").textContent=(meta.cached?`Saved ${savedAgo(meta.at)}, refreshing…`:"Updated "+new Date(meta.at).toLocaleTimeString("en-US",{timeZone:tz,hour:"numeric",minute:"2-digit"}))+` · ${rows.length} collabs`;
 }
-$("refresh").onclick=load;
+function loadErr(e){
+  if(e&&e.code==="not_signed_in"){showGate("Your session ended. Sign in again.");return}
+  if(rows.length){$("freshText").textContent+=" · couldn't refresh";return}
+  showNote(errCopy(e),true);$("freshText").textContent="Couldn't load";
+}
+async function refreshNow(){
+  if(busy)return;busy=true;
+  const b=$("refresh");b.disabled=true;b.classList.add("spin");$("freshText").textContent="Refreshing…";
+  try{const p=await fetchKpiRaw(true);cacheWrite("kpi",swr.email,p);onData(p,{cached:false,at:Date.now()})}
+  catch(e){loadErr(e)}finally{busy=false;b.disabled=false;b.classList.remove("spin")}
+}
+$("refresh").onclick=refreshNow;
 function showGate(msg){if(window.Shell)Shell.setUser(null);$("app").hidden=true;$("gate").hidden=false;$("gateErr").textContent=msg||"";$("gateErr").hidden=!msg}
 $("signout").onclick=async()=>{try{await api("/api/auth/logout")}catch(e){}showGate("")};
 (async()=>{
-  const cfg=await Shell.config;
-  if(!cfg.signedIn){showGate("");return}
-  $("app").hidden=false;load();
+  try{const cfg=await swr("kpi",()=>fetchKpiRaw(false),onData);if(!cfg.signedIn)showGate("")}
+  catch(e){loadErr(e)}
 })();
 </script>
 </body>

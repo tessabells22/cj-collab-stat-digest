@@ -62,6 +62,14 @@ Timing: Vercel Cron runs in UTC, so `vercel.json` schedules 11:30 and 12:30 UTC 
 
 Each person's Slack email must match their Google and Monday.com email. Collabs marked "handled" in the digest are saved per browser, so the briefing still counts them.
 
+## Loading speed
+
+- Each page keeps a saved copy of your last data in the browser and shows it straight away, then swaps in the fresh read. Signing out deletes the saved copies.
+- `/api/monday` `op:"digest"` returns active collabs and their latest updates in one request. The browser sends the `updated_at` of items it already has updates for, so refreshes only re-read updates for collabs that changed; update batches run in parallel.
+- The server keeps each person's list for 45 seconds, so moving between pages doesn't re-read Monday. Refresh buttons skip it.
+- The Monday user id is stored in the session at sign-in, which saves a lookup on every request.
+- KPIs and Creators read active collabs plus Approved/Completed ones from the last 180 days, in parallel, instead of the whole history.
+
 ## Differences from the claude.ai version
 
 - **Sign-in** is company Google, not the claude.ai Monday connector. Monday is read with one shared token, and the server filters to the signed-in person's collabs.
