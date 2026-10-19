@@ -108,6 +108,15 @@ const norm=s=>String(s||"").trim().toLowerCase();
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function ago(iso){if(!iso)return"";const d=new Date(iso);if(isNaN(d))return"";const m=Math.round((Date.now()-d)/6e4);
   if(m<1)return"just now";if(m<60)return m+" min ago";const h=Math.round(m/60);if(h<48)return h+" h ago";return Math.round(h/24)+" days ago"}
+const dayNum=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s||"");return m?Date.UTC(+m[1],m[2]-1,+m[3])/864e5:null};
+const todayNum=()=>dayNum(new Intl.DateTimeFormat("en-CA",{timeZone:tz}).format(new Date()));
+function daysUntil(deadline){const d=dayNum(deadline);return d==null?null:d-todayNum()}
+function timingLabel(left){
+  if(left==null)return"";
+  if(left<0)return`${-left} day${left===-1?"":"s"} late`;
+  if(left===0)return"Due today";
+  return left===1?"Due tomorrow":`Due in ${left} days`;
+}
 function dueDate(s){if(!s)return null;const d=new Date(s.length<=10?s+"T23:59:59+08:00":s);return isNaN(d)?null:d}
 function fmtDue(s){const d=dueDate(s);return d?d.toLocaleDateString("en-US",{timeZone:tz,month:"short",day:"numeric",year:"numeric"}):""}
 function fmtWhen(iso){const d=new Date(iso);return isNaN(d)?"":d.toLocaleDateString("en-US",{timeZone:tz,month:"short",day:"numeric"})}
@@ -135,7 +144,7 @@ function buildRow(it,updates){
   let sub=SUB[stageName]?cv(it,SUB[stageName]):"";
   if(sub==="-")sub="";
   if(!sub){const any=SUB_IDS.map(id=>cv(it,id)).filter(v=>v&&v!=="-");sub=stageName==="Planning"?"":(any[any.length-1]||"")}
-  const creator=cv(it,COL.creator),delays=cv(it,COL.delays).replace(/(\d+)\.\d+/g,"$1");
+  const creator=cv(it,COL.creator);
   const daysRaw=parseInt(cv(it,COL.days),10),days=isNaN(daysRaw)?null:daysRaw;
   const deadline=cv(it,COL.deadline),stageStart=cv(it,COL.stageStart);
   const p=latestPost(updates),meName=norm(me&&me.name);
@@ -145,7 +154,7 @@ function buildRow(it,updates){
   let mention=null;
   if(meName)(updates||[]).forEach(u=>[u,...(u.replies||[])].forEach(x=>{
     if(norm(x.creator&&x.creator.name)!==meName&&norm(x.text_body).includes("@"+meName)&&(!mention||ts(x.created_at)>ts(mention.created_at)))mention=x}));
-  const row={id:it.id,name:String(it.name||"").trim(),url:it.url,stage:stageName,subStage:sub,creator,deadline,delays,daysInStage:days,
+  const row={id:it.id,name:String(it.name||"").trim(),url:it.url,stage:stageName,subStage:sub,creator,deadline,delays:"",daysInStage:days,
     mentionsMe,mentionAt:mention?mention.created_at:"",mentionBy:mention&&mention.creator?mention.creator.name:"",latest:p?{text:text.length>220?text.slice(0,217)+"…":text,by,at:p.created_at,isReply:p.isReply,replyTo:p.replyTo}:{} };
   /* exclusions that need the posts */
   const handoff=p&&meName&&norm(by)===meName&&/spark/i.test(text)&&(/post(ed)?\s*link/i.test(text)||/https?:\/\/\S*(tiktok|instagram|youtu)/i.test(text));
@@ -153,10 +162,14 @@ function buildRow(it,updates){
   if(finishedByColumns(stageName,sub)||handoff||notStarted)return null;
   /* timing */
   const d=dueDate(deadline),now=Date.now();
-  row.overdue=/late/i.test(delays)||(!!d&&d<now);
-  const m=delays.match(/(\d+)\s*days?\s*late/i);
-  row.daysLate=row.overdue?(m?+m[1]:Math.max(0,Math.floor((now-d)/864e5))):0;
-  const dueToday=!row.overdue&&!!d&&d-now<864e5;
+  /* Timing comes from the deadline date in Manila calendar days. The Delays formula isn't used:
+     through the API it reads "0.5 days late" on the deadline day itself, while the board shows "Deadline today". */
+  const left=daysUntil(deadline);
+  row.overdue=left!=null&&left<0;
+  row.daysLate=row.overdue?-left:0;
+  row.dueToday=left===0;
+  row.delays=timingLabel(left);
+  const dueToday=row.dueToday;
   row.stageStart=stageStart;
   const stageMoved=!!stageStart&&now-ts(stageStart+"T00:00:00+08:00")<864e5;
   const fresh=p&&now-ts(p.created_at)<864e5;
@@ -327,7 +340,7 @@ function sorted(list){
 function rowHTML(it,showGroup){
   const hex=STAGE_HEX[it.stage]||"#8C93B4",u=it.latest||{},grp=GROUP_OF[it.group];
   const d=dueDate(it.deadline),now=Date.now();
-  const timing=it.overdue?"late":(d&&d-now<864e5)?"today":"";
+  const timing=it.overdue?"late":it.dueToday?"today":"";
   const done=isHandled(it),fresh=isNew(it);
   const flags=[];
   if(showGroup&&grp)flags.push(`<span class="flag" style="color:${grp.c};border-color:${grp.c}">${esc(grp.label)}</span>`);
@@ -338,7 +351,7 @@ function rowHTML(it,showGroup){
   if(it.overdue)flags.push(`<span class="flag late">${it.daysLate?it.daysLate+"d late":"<1d late"}</span>`);
   if(Number(it.daysInStage)>=5)flags.push(`<span class="flag stuck">${esc(it.daysInStage)}d in stage</span>`);
   if(u.at&&now-ts(u.at)<864e5)flags.push(`<span class="flag new">New ${u.isReply?"comment":"update"}</span>`);
-  const facts=[["Client",it.client],["Days in stage",it.daysInStage==null?"":String(it.daysInStage)],["Delays",it.delays]].filter(x=>x[1]);
+  const facts=[["Client",it.client],["Days in stage",it.daysInStage==null?"":String(it.daysInStage)],["Timing",it.delays]].filter(x=>x[1]);
   return `<details class="row" data-id="${esc(it.id)}" style="--stage:${hex}">
     <summary>
       <span class="who"><span class="nm" title="${esc(it.name)}">${fresh?'<i class="newdot" title="New since your last visit"></i>':""}<i class="dot ${timing}"></i>${esc(it.name)}</span><span class="cr">${esc(it.creator||"No creator")}</span></span>
