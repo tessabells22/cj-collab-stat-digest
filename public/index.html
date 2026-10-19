@@ -34,6 +34,9 @@
 .nx .r{font-size:12.5px;color:var(--muted);grid-column:1}
 .nx a{grid-row:1/3;grid-column:2;color:var(--crystal);font:600 12.5px var(--f-body);text-decoration:none;white-space:nowrap}
 .nx a:hover{text-decoration:underline}
+.brief{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-top:14px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.brief button{appearance:none;background:none;border:0;padding:0;color:var(--crystal);font:600 13px var(--f-body);cursor:pointer}
+.brief button:disabled{opacity:.6;cursor:progress}
 .today .empty-day{margin:0;color:var(--muted);font-size:14px}
 .skel{height:84px;border-radius:14px;background:linear-gradient(90deg,var(--deck-2),var(--line),var(--deck-2));background-size:200% 100%;animation:sk 1.4s linear infinite}
 @keyframes sk{to{background-position:-200% 0}}
@@ -64,6 +67,7 @@
       <div class="counts" id="counts"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
       <div class="meta" id="todayMeta"></div>
       <div class="next" id="next"></div>
+      <div class="brief" id="brief" hidden></div>
     </section>
     <p class="hero-note"><i></i><span>Collab Digest reads the Monday.com Production board and never changes it. You message creators yourself; it only drafts the words.</span></p>
   </section>
@@ -80,12 +84,25 @@
   if(authErr)history.replaceState(null,"",location.pathname);
   const AUTH_ERR={denied:"Google sign-in was cancelled.",state:"Sign-in took too long. Try again.",exchange:"Google sign-in failed. Try again.",
     wrong_domain:"Use your company Google account. Personal Gmail accounts can't sign in.",not_configured:"Sign-in isn't set up yet."};
-  if(cfg.signedIn){document.getElementById("app").hidden=false;loadToday();return}
+  if(cfg.signedIn){document.getElementById("app").hidden=false;loadToday();showBriefing(cfg);return}
   let msg=authErr?(AUTH_ERR[authErr]||"Sign-in failed."):"";
   if(cfg.missing&&cfg.missing.length)msg=msg||"Sign-in isn't set up yet. Missing in Vercel: "+cfg.missing.join(", ")+".";
   const err=document.getElementById("gateErr");err.textContent=msg;err.hidden=!msg;
   document.getElementById("gate").hidden=false;
 })();
+
+/* ---------- Slack morning briefing ---------- */
+function showBriefing(cfg){
+  if(!cfg.briefing)return;
+  const el=document.getElementById("brief");el.hidden=false;
+  el.innerHTML=`<span>${cfg.briefingMe?"You get this in Slack at 7:30 AM Eastern on weekdays.":"Morning Slack briefing: 7:30 AM Eastern on weekdays. Ask Tessa to add you."}</span><button type="button" id="testBrief">Send me a test now</button><span id="briefMsg" role="status"></span>`;
+  document.getElementById("testBrief").onclick=async e=>{
+    const b=e.currentTarget,m=document.getElementById("briefMsg");b.disabled=true;m.textContent="Sending…";
+    try{await api("/api/briefing/test");m.textContent="Sent. Check your Slack DMs."}
+    catch(err){m.textContent=(err&&err.message)||"Couldn't send it. Try again in a minute."}
+    finally{b.disabled=false}
+  };
+}
 
 /* ---------- today snapshot ---------- */
 const $=id=>document.getElementById(id);

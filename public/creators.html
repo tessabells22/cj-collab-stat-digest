@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Creators</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/app.css">
+<link rel="stylesheet" href="/shell.css">
+<style>
+/* Creators: one row per creator you work with. The row shows active / late / due soon / on-time
+   history / last update; opening it lists their collabs and past deliveries, with a Message button. */
+.wrap{max-width:1120px;gap:22px}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.toolbar input{flex:1 1 260px;min-width:0;font:13.5px var(--f-body);color:var(--text);background:var(--deck);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.toolbar select{font:13.5px var(--f-body);color:var(--text);background:var(--deck);border:1px solid var(--line);border-radius:10px;padding:12px}
+.chk{white-space:nowrap;display:inline-flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted);cursor:pointer}
+.chk input{accent-color:var(--violet)}
+.stats{display:flex;flex-wrap:wrap;gap:10px}
+.stat{display:flex;align-items:baseline;gap:8px;padding:12px 16px;border-radius:14px;border:1px solid var(--line);background:var(--deck)}
+.stat b{font:600 24px/1 var(--f-body);font-variant-numeric:tabular-nums}
+.stat span{font-size:13px;color:var(--muted)}
+.colhead{display:grid;grid-template-columns:minmax(0,2.4fr) repeat(4,minmax(0,.8fr)) minmax(0,1fr) 16px;gap:14px;padding:0 18px;font:600 10.5px/1.2 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.list{display:flex;flex-direction:column;gap:8px}
+.cr{background:var(--deck);border:1px solid var(--line);border-radius:14px;overflow:hidden;position:relative}
+.cr.hot::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--danger)}
+.cr>summary{list-style:none;display:grid;grid-template-columns:minmax(0,2.4fr) repeat(4,minmax(0,.8fr)) minmax(0,1fr) 16px;gap:14px;align-items:center;padding:14px 18px;cursor:pointer}
+.cr>summary::-webkit-details-marker{display:none}
+.cr>summary:hover{background:var(--deck-2)}
+.cr>summary:focus-visible{outline:2px solid var(--violet);outline-offset:-2px}
+.cwho{display:flex;align-items:center;gap:12px;min-width:0}
+.av{width:36px;height:36px;border-radius:50%;flex:none;display:grid;place-items:center;font:600 13px var(--f-body);color:#fff;background:linear-gradient(135deg,var(--violet),var(--crystal))}
+.cwho .cnm{font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cwho .cl{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cwho>span:not(.av){display:flex;flex-direction:column;gap:2px;min-width:0}
+.num{display:flex;flex-direction:column;gap:2px}
+.num b{font:600 17px/1.1 var(--f-body);font-variant-numeric:tabular-nums}
+.num span{font-size:11.5px;color:var(--muted)}
+.num.bad b{color:var(--danger-text)}.num.warn b{color:var(--orange)}.num.zero b{color:var(--muted)}
+.clu{font-size:12.5px;color:var(--muted)}
+.cnote{margin:0;font-size:12.5px;color:var(--muted)}
+.chev{width:14px;height:14px;color:var(--muted);transition:transform .15s}
+.cr[open] .chev{transform:rotate(90deg)}
+.cr[open]>summary{border-bottom:1px solid var(--line)}
+.det{padding:18px;display:flex;flex-direction:column;gap:18px}
+.det h4{margin:0 0 8px;font:600 10.5px/1.2 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+th{text-align:left;font:600 10.5px/1.2 var(--f-display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top;overflow-wrap:anywhere}
+td.n,th.n{text-align:right;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td a{color:var(--crystal);text-decoration:none}
+td a:hover{text-decoration:underline}
+td .s{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.tag{display:inline-block;font:600 11px/1 var(--f-body);padding:5px 8px;border-radius:6px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.tag.late{color:var(--danger-text);border-color:var(--danger)}.tag.ok{color:var(--lume);border-color:var(--lume)}.tag.today{color:var(--orange);border-color:var(--orange)}
+.acts{display:flex;gap:10px;flex-wrap:wrap}
+.empty{background:var(--deck);border:1px dashed var(--line);border-radius:16px;padding:24px 20px;display:flex;flex-direction:column;gap:6px}
+.empty h3{margin:0;font:600 16px/1.3 var(--f-display)}
+.empty p{margin:0;color:var(--muted)}
+@media (max-width:860px){
+  .colhead{display:none}
+  .cr>summary{grid-template-columns:repeat(4,minmax(0,1fr)) 14px;row-gap:12px}
+  .cwho{grid-column:1/5;grid-row:1}.chev{grid-column:5;grid-row:1/3}.clu{display:none}
+}
+@media (max-width:640px){.det{padding:14px}.det .opt{display:none}}
+</style>
+</head>
+<body data-page="creators" data-crumb="Creators" data-auth="required">
+<div class="shell" id="app" hidden>
+<aside class="side"></aside>
+<div class="main">
+<header class="topbar"></header>
+<main class="content">
+<div class="wrap">
+  <header class="page-head">
+    <div>
+      <span class="eyebrow">Creators · Production board</span>
+      <h1>Your <em>creators</em></h1>
+      <p class="lede"><span class="fresh" id="fresh"><i></i><span id="freshText">Loading…</span></span><span>Everyone on your collabs, with what they owe you and how they've delivered before.</span></p>
+    </div>
+    <div class="head-actions"><a class="btn" href="/messages?view=chase">Chase list</a><button type="button" class="btn primary" id="refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>Refresh</button></div>
+  </header>
+  <div class="note" id="note" hidden></div>
+  <div class="stats" id="stats"></div>
+  <div class="toolbar">
+    <input id="q" type="search" placeholder="Search creators, clients or collabs" aria-label="Search creators">
+    <select id="sortSel" aria-label="Sort">
+      <option value="attention">Needs attention first</option>
+      <option value="active">Most active collabs</option>
+      <option value="ontime">Lowest on-time rate</option>
+      <option value="az">A to Z</option>
+    </select>
+    <label class="chk"><input type="checkbox" id="onlyActive" checked>Only creators with active collabs</label>
+  </div>
+  <div class="colhead" id="colhead" aria-hidden="true"><span>Creator · clients</span><span>Active</span><span>Late</span><span>Due ≤ 3 days</span><span>On time</span><span>Last update</span><span></span></div>
+  <div class="list" id="list"><div class="empty"><h3>Loading your creators</h3><p>Reading your collabs from Monday.com.</p></div></div>
+  <footer>"Late" counts only collabs where the next step is the creator's: filming, revisions or something they owe you. On time is their record on your collabs that reached Approved or Completed with a deadline.</footer>
+</div>
+</main>
+</div>
+</div>
+
+<script src="/shell.js"></script>
+<script src="/collabs.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const FINISHED=/^(approved|completed)$/i;
+let people=[],query="",sort=store.get("cr.sort")||"attention",onlyActive=store.get("cr.active")!=="0";
+$("sortSel").value=sort;$("onlyActive").checked=onlyActive;
+const initials=s=>String(s).split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join("")||"?";
+const pct=(a,b)=>b?Math.round(a/b*100)+"%":"–";
+
+/* active rows (digest grouping, latest post) + full history (KPI list incl. Completed) → one entry per creator */
+function build(active,history){
+  const m={};
+  const get=n=>m[n]=m[n]||{name:n,active:[],done:[],clients:new Set()};
+  active.forEach(r=>creatorNames(r.creator).forEach(n=>{const p=get(n);p.active.push(r);p.clients.add(r.client||clientOf(r.name))}));
+  history.forEach(it=>{
+    const stage=cv(it,COL.stage);if(!FINISHED.test(stage))return;
+    const row={id:String(it.id),name:String(it.name||"").trim(),url:it.url,deadline:dayNum(cv(it,COL.deadline)),done:dayNum(cv(it,COL.stageStart)),stage};
+    creatorNames(cv(it,COL.creator)).forEach(n=>{const p=get(n);p.done.push(row);p.clients.add(clientOf(row.name))});
+  });
+  return Object.values(m).map(p=>{
+    const late=p.active.filter(isLate),soon=p.active.filter(r=>{const d=daysUntil(r.deadline);return d!=null&&d>=0&&d<=3&&creatorOwes(r)});
+    const withDl=p.done.filter(r=>r.deadline!=null&&r.done!=null),onTime=withDl.filter(r=>r.done<=r.deadline);
+    const lastAt=Math.max(0,...p.active.map(r=>ts(r.latest&&r.latest.at)));
+    p.done.sort((a,b)=>(b.done||0)-(a.done||0));
+    return{...p,clients:[...p.clients].sort(),late,soon,withDl:withDl.length,onTime:onTime.length,rate:withDl.length?onTime.length/withDl.length:null,lastAt,
+      needsYou:p.active.filter(r=>r.group==="needsYou").length};
+  });
+}
+
+function sorted(list){
+  const a=list.slice(),score=p=>p.late.length*100+p.needsYou*10+p.soon.length;
+  if(sort==="active")a.sort((x,y)=>y.active.length-x.active.length||x.name.localeCompare(y.name));
+  else if(sort==="ontime")a.sort((x,y)=>(x.rate??2)-(y.rate??2)||y.withDl-x.withDl);
+  else if(sort==="az")a.sort((x,y)=>x.name.localeCompare(y.name));
+  else a.sort((x,y)=>score(y)-score(x)||y.active.length-x.active.length||x.name.localeCompare(y.name));
+  return a;
+}
+const matches=p=>!query||[p.name,...p.clients,...p.active.map(r=>r.name),...p.done.map(r=>r.name)].join(" ").toLowerCase().includes(query);
+const num=(v,label,cls)=>`<span class="num ${v?cls:"zero"}"><b>${v}</b><span>${label}</span></span>`;
+function timingTag(r){const l=daysUntil(r.deadline);if(l==null)return'<span class="tag">No deadline</span>';
+  return`<span class="tag ${l<0?"late":l===0?"today":""}">${esc(timingLabel(l))}</span>`}
+
+function render(){
+  const list=sorted(people.filter(p=>(!onlyActive||p.active.length)&&matches(p)));
+  const act=people.filter(p=>p.active.length);
+  $("stats").innerHTML=`<div class="stat"><b>${act.length}</b><span>creators on active collabs</span></div>
+    <div class="stat"><b>${act.filter(p=>p.late.length).length}</b><span>owe you something late</span></div>
+    <div class="stat"><b>${act.filter(p=>p.soon.length).length}</b><span>have a deadline in 3 days</span></div>`;
+  $("colhead").hidden=!list.length;
+  if(!list.length){$("list").innerHTML=`<div class="empty"><h3>${query?"No creator matches":"No creators yet"}</h3><p>${query?"Try another name, client or collab.":"Creators show up here once they're linked to your collabs in Monday.com."}</p></div>`;return}
+  const open=new Set([...document.querySelectorAll("details.cr[open]")].map(d=>d.dataset.n));
+  $("list").innerHTML=list.map(p=>{
+    const first=firstName(p.name),tpl=p.late.length?"late":"";
+    const activeTbl=p.active.length?`<table><thead><tr><th>Collab</th><th class="opt">Stage</th><th>Deadline</th><th class="opt">Latest update</th></tr></thead><tbody>${
+      p.active.slice().sort((a,b)=>(dayNum(a.deadline)??1e9)-(dayNum(b.deadline)??1e9)).map(r=>`<tr>
+        <td>${r.url?`<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.name)}</a>`:esc(r.name)}<span class="s">${esc(r.client||"")}</span></td>
+        <td class="opt">${esc(r.stage)}${r.subStage?`<span class="s">${esc(r.subStage)}</span>`:""}</td>
+        <td>${r.deadline?esc(shortDue(r.deadline)):""}<span class="s">${timingTag(r)}</span></td>
+        <td class="opt">${r.latest&&r.latest.at?`${esc(ago(r.latest.at))}<span class="s">${esc((r.latest.text||"").slice(0,90))}${(r.latest.text||"").length>90?"…":""}</span>`:'<span class="s">No updates</span>'}</td></tr>`).join("")}</tbody></table>`:'<p class="cnote">No active collabs right now.</p>';
+    const doneTbl=p.done.length?`<table><thead><tr><th>Collab</th><th>Delivered</th><th class="n">Result</th></tr></thead><tbody>${
+      p.done.slice(0,6).map(r=>{const d=r.done!=null?new Date(r.done*864e5).toLocaleDateString("en-US",{timeZone:"UTC",month:"short",day:"numeric"}):"";
+        const res=r.deadline==null||r.done==null?'<span class="tag">No deadline</span>':r.done<=r.deadline?'<span class="tag ok">On time</span>':`<span class="tag late">${r.done-r.deadline}d late</span>`;
+        return`<tr><td>${r.url?`<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.name)}</a>`:esc(r.name)}</td><td>${d}</td><td class="n">${res}</td></tr>`}).join("")}</tbody></table>${p.done.length>6?`<p class="cnote">+ ${p.done.length-6} earlier</p>`:""}`:'<p class="cnote">No finished collabs with you yet.</p>';
+    return`<details class="cr${p.late.length?" hot":""}" data-n="${esc(p.name)}"${open.has(p.name)?" open":""}>
+      <summary>
+        <span class="cwho"><span class="av" aria-hidden="true">${esc(initials(p.name))}</span><span><span class="cnm">${esc(p.name)}</span><span class="cl">${esc(p.clients.join(", "))}</span></span></span>
+        ${num(p.active.length,"active","")}${num(p.late.length,"late","bad")}${num(p.soon.length,"due soon","warn")}
+        <span class="num ${p.withDl?"":"zero"}"><b>${pct(p.onTime,p.withDl)}</b><span>${p.withDl?`${p.onTime} of ${p.withDl}`:"no history"}</span></span>
+        <span class="clu">${p.lastAt?esc(ago(new Date(p.lastAt).toISOString())):"–"}</span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+      </summary>
+      <div class="det">
+        <div><h4>Active collabs</h4>${activeTbl}</div>
+        <div><h4>Delivered with you</h4>${doneTbl}</div>
+        <div class="acts">${p.active.length?`<a class="btn primary" href="/messages?creator=${encodeURIComponent(p.name)}${tpl?"&t="+tpl:""}">Message ${esc(first)}</a>`:""}</div>
+      </div></details>`}).join("");
+}
+
+let qt;$("q").addEventListener("input",e=>{clearTimeout(qt);qt=setTimeout(()=>{query=e.target.value.trim().toLowerCase();render()},120)});
+$("sortSel").onchange=e=>{sort=e.target.value;store.set("cr.sort",sort);render()};
+$("onlyActive").onchange=e=>{onlyActive=e.target.checked;store.set("cr.active",onlyActive?"1":"0");render()};
+
+function showNote(t,err){const n=$("note");n.textContent=t;n.className="note"+(err?" err":"");n.hidden=!t}
+function showGate(msg){if(window.Shell)Shell.setUser(null);$("app").hidden=true;$("gate").hidden=false;$("gateErr").textContent=msg||"";$("gateErr").hidden=!msg}
+$("signout").onclick=async()=>{try{await api("/api/auth/logout")}catch(e){}showGate("")};
+const cache=new Map();let busy=false;
+async function load(){
+  if(busy)return;busy=true;const b=$("refresh");b.disabled=true;b.classList.add("spin");$("freshText").textContent="Loading your creators…";
+  try{
+    const [cur,hist]=await Promise.all([fetchCollabs(cache),api("/api/monday",{op:"kpi"})]);
+    people=build(Object.values(cur.groups).flat(),hist.items||[]);
+    showNote("");render();
+    $("freshText").textContent=`${people.filter(p=>p.active.length).length} creators · updated `+new Date().toLocaleTimeString("en-US",{timeZone:tz,hour:"numeric",minute:"2-digit"});
+  }catch(e){
+    if(e&&e.code==="not_signed_in"){showGate("Your session ended. Sign in again.");return}
+    $("freshText").textContent="Couldn't load";showNote(e&&e.code==="no_monday_user"?"Your Google email doesn't match a Monday.com user. Ask Tessa to check.":"Couldn't load from Monday.com. Press Refresh to try again.",true);
+  }finally{busy=false;b.disabled=false;b.classList.remove("spin")}
+}
+$("refresh").onclick=load;
+(async()=>{const cfg=await Shell.config;if(!cfg.signedIn){showGate("");return}$("app").hidden=false;load()})();
+</script>
+</body>
+</html>

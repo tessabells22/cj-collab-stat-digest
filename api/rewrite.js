@@ -10,7 +10,8 @@ const SYSTEM =
   "You help a Creative Fulfillment Specialist at a UGC video agency message a creator on Brkaway (the creator platform). " +
   "Write one short, warm, professional message to the creator. Use the creator's first name, a couple of friendly emojis, simple sentences, no em dashes. " +
   "Base it on the status and the latest internal post you're given, but never reveal internal team names, QA notes about colleagues, or anything the creator should not see. " +
-  "If the latest post asks for changes from the creator, list them as short bullet points (●). Reply with only the message text.";
+  "If the latest post asks for changes from the creator, list them as short bullet points (●). " +
+  "When several collabs are listed, keep them as a short bulleted list and keep the purpose of the draft. Reply with only the message text.";
 
 const clip = (v, n) => String(v ?? "").slice(0, n);
 
@@ -20,12 +21,17 @@ export async function POST(request) {
     requireSession(request);
     let b;
     try { b = await request.json(); } catch { b = {}; }
-    const prompt =
-      `Collab: ${clip(b.name, 200)}\nCreator: ${clip(b.creator, 120) || "unknown"}\n` +
-      `Stage: ${clip(b.stage, 80)}${b.subStage ? ` (${clip(b.subStage, 80)})` : ""}\n` +
-      `Deadline: ${clip(b.deadline, 40) || "none"} ${clip(b.delays, 80)}\n` +
-      `Latest internal post (${clip(b.latestAt, 40) || "none"}): ${clip(b.latestText, 1500) || "none"}\n\n` +
-      `Current draft:\n${clip(b.draft, 4000)}`;
+    const collabs = Array.isArray(b.collabs) ? b.collabs.slice(0, 15) : null;
+    const prompt = collabs && collabs.length
+      ? `Purpose: ${clip(b.purpose, 60) || "update"}\nCreator: ${clip(b.creator, 120) || "unknown"}\nCollabs:\n` +
+        collabs.map((c) => `- ${clip(c.name, 200)} | ${clip(c.stage, 80)}${c.subStage ? ` (${clip(c.subStage, 80)})` : ""} | deadline ${clip(c.deadline, 40) || "none"} ${clip(c.timing, 40)}` +
+          (c.latest ? ` | latest internal post: ${clip(c.latest, 400)}` : "")).join("\n") +
+        `\n\nCurrent draft:\n${clip(b.draft, 4000)}`
+      : `Collab: ${clip(b.name, 200)}\nCreator: ${clip(b.creator, 120) || "unknown"}\n` +
+        `Stage: ${clip(b.stage, 80)}${b.subStage ? ` (${clip(b.subStage, 80)})` : ""}\n` +
+        `Deadline: ${clip(b.deadline, 40) || "none"} ${clip(b.delays, 80)}\n` +
+        `Latest internal post (${clip(b.latestAt, 40) || "none"}): ${clip(b.latestText, 1500) || "none"}\n\n` +
+        `Current draft:\n${clip(b.draft, 4000)}`;
 
     const msg = await client.beta.messages.create({
       model: MODEL,
