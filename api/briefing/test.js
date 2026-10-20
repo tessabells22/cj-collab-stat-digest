@@ -1,6 +1,9 @@
-// "Send me a test briefing": sends the signed-in person's briefing to their own Slack right now.
-import { json, requireSession, errorResponse } from "../_lib.js";
-import { sendBriefing } from "../_briefing.js";
+// "Send me a test briefing": sends the signed-in person's briefing to their own Slack right now,
+// read with the Monday token on this browser. If they're on the list and the token store is set up,
+// it also re-saves the token for the 7:30 AM run (covers people added to BRIEFING_EMAILS after connecting).
+import { json, requireSession, requireMonday, errorResponse } from "../_lib.js";
+import { sendBriefing, recipients } from "../_briefing.js";
+import { storeEnabled, saveToken } from "../_store.js";
 
 const COPY = {
   slack_disabled: "The Slack briefing isn't set up yet.",
@@ -13,7 +16,12 @@ const COPY = {
 export async function POST(request) {
   try {
     const session = requireSession(request);
-    return json({ ok: true, ...(await sendBriefing(session.email)) });
+    const m = requireMonday(request, session);
+    const out = await sendBriefing(session.email, m);
+    if (storeEnabled() && recipients().includes(session.email.toLowerCase())) {
+      try { await saveToken({ email: session.email.toLowerCase(), ...m }); } catch (e) { console.error(e.message); }
+    }
+    return json({ ok: true, ...out });
   } catch (e) {
     if (COPY[e.code]) return json({ error: { code: e.code, message: COPY[e.code] } }, 400);
     return errorResponse(e);

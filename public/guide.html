@@ -174,10 +174,10 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
   <header>
     <span class="eyebrow">Guide</span>
     <h1>Get the most out of <em>Collab Digest</em></h1>
-    <p class="lede">Collab Digest shows every Production board collab where you're the CFS, sorted by what needs you first. No more scrolling the board or opening items one by one. It reads Monday.com live after you sign in with your company Google account and refreshes every 5 minutes. It never changes anything in Monday.</p>
+    <p class="lede">Collab Digest shows every Production board collab where you're the CFS, sorted by what needs you first. No more scrolling the board or opening items one by one. It reads Monday.com live with your own Monday.com token after you sign in with your company Google account, and refreshes every 5 minutes. It never changes anything in Monday.</p>
     <div class="cta-row">
       <a class="btn primary" href="/digest">Open my collabs →</a>
-      <span class="progress"><span id="progText">Setup 0 of 3</span><span class="bar"><i id="progBar"></i></span></span>
+      <span class="progress"><span id="progText">Setup 0 of 4</span><span class="bar"><i id="progBar"></i></span></span>
     </div>
     <nav class="jump" aria-label="Sections">
       <a href="#setup">1 · Set up</a><a href="#demo">2 · Try the page</a><a href="#quiz">3 · Which group?</a><a href="#hidden">4 · What's hidden</a><a href="#fixes">5 · Fixes</a>
@@ -191,6 +191,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
     <div class="steps" id="steps">
       <label class="step"><input type="checkbox" id="s1"><span><b>Open Collab Digest and bookmark it</b><p>Use the button at the top of this page.</p></span></label>
       <label class="step"><input type="checkbox" id="s2"><span><b>Continue with Google</b><p>Use your <span class="kbd">@contentjet.io</span> Google account. Personal Gmail accounts are blocked.</p></span></label>
+      <label class="step" id="token"><input type="checkbox" id="s4"><span><b>Connect your Monday.com</b><p>The page asks for your personal Monday.com API token. In Monday.com click your avatar (bottom left) → <span class="kbd">Developers</span> → <span class="kbd">My access tokens</span> → <span class="kbd">Show</span> → <span class="kbd">Copy</span>, then paste it and press <span class="kbd">Connect</span>. You only do this once per browser. It's only used to read the board.</p></span></label>
       <label class="step"><input type="checkbox" id="s3"><span><b>Check that the title shows your name</b><p>It should read "What needs <i>your first name</i> on Production?". The first load takes a few seconds; refreshes after that are quick.</p></span></label>
     </div>
     <div class="done-note" id="doneNote" hidden>All set. Open Collab Digest and start with the <b>Needs you</b> group.</div>
@@ -255,13 +256,14 @@ const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 /* mode */
 
 /* 1 setup checklist */
-const stepIds=["s1","s2","s3"];
+const stepIds=["s1","s2","s4","s3"];
 function syncSteps(){
   const n=stepIds.filter(id=>$(id).checked).length;
   stepIds.forEach(id=>$(id).closest(".step").classList.toggle("done",$(id).checked));
-  $("progText").textContent=n===3?"Setup complete":`Setup ${n} of 3`;
-  $("progBar").style.width=(n/3*100)+"%";
-  $("doneNote").hidden=n!==3;
+  const all=stepIds.length;
+  $("progText").textContent=n===all?"Setup complete":`Setup ${n} of ${all}`;
+  $("progBar").style.width=(n/all*100)+"%";
+  $("doneNote").hidden=n!==all;
 }
 stepIds.forEach(id=>{$(id).checked=store.get("guide."+id)==="1";$(id).onchange=()=>{store.set("guide."+id,$(id).checked?"1":"0");syncSteps()}});
 syncSteps();
@@ -361,8 +363,9 @@ $("showHidden").onchange=renderHidden;renderHidden();
 /* 5 fixes */
 const FAQ=[
   {q:"\"Sign in to Collab Digest\" keeps showing",a:"Click <b>Continue with Google</b> and pick your @contentjet.io account. If you picked a personal Gmail, you'll see a message saying so; try again with your work account.",k:"sign in signed out login google gmail setup"},
-  {q:"\"Your Google email doesn't match a Monday.com user\"",a:"Your Monday.com account uses a different email from your Google login. Message Tessa so she can match them up.",k:"no monday user email match missing account"},
-  {q:"\"The site's Monday.com connection stopped working\"",a:"Nothing you can fix yourself. Message Tessa; the site's Monday token needs updating.",k:"connection token stopped broken monday"},
+  {q:"Where do I find my Monday.com token?",a:"In Monday.com click your avatar (bottom left) → <b>Developers</b> → <b>My access tokens</b> → <b>Show</b> → <b>Copy</b>. Don't share it with anyone: it can do anything your Monday account can. Collab Digest only uses it to read the board.",k:"token api key connect developers access where find"},
+  {q:"\"Monday.com stopped accepting your token\"",a:"Your token was regenerated in Monday.com, so the old one no longer works. Copy the current one and paste it into the Connect screen.",k:"connection token stopped broken monday rejected regenerated"},
+  {q:"I connected the wrong Monday account",a:"Open your avatar menu (top right) → <b>Change Monday.com token</b>, paste your own token, or press <b>Disconnect</b>. The menu shows which Monday account is connected.",k:"wrong account change token disconnect"},
   {q:"\"Monday.com didn't answer in time\"",a:"Nothing to do. The last good data stays on screen and the next refresh tries again.",k:"timeout slow didn't answer error rate limit"},
   {q:"The list is empty",a:"Check that you're listed in the CFS column on the Production board in Monday. The page only shows collabs where you are the CFS.",k:"empty nothing no collabs"},
   {q:"Rewrite with Claude is missing",a:"It only shows when the site has Claude set up. The message template and Copy button still work without it.",k:"claude rewrite ai missing"},

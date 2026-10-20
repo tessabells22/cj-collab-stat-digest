@@ -1,4 +1,5 @@
-// Monday.com reads shared by the API routes and the morning briefing.
+// Monday.com reads shared by the API routes and the morning briefing. Every read uses the person's own
+// token, passed in as user = {id, token}; id is the Monday user the token belongs to.
 import { monday, AppError } from "./_lib.js";
 
 const BOARD = process.env.MONDAY_BOARD_ID || "18409265319";
@@ -30,13 +31,13 @@ export const isCfs = (item, userId) =>
 
 const checkId = (userId) => { if (!/^\d+$/.test(String(userId))) throw new AppError("tool_error", "Monday.com returned an unexpected user id.", 502); };
 
-async function pageAll(rules) {
-  const data = await monday(pageQuery(rules), { board: [BOARD] });
+async function pageAll(rules, token) {
+  const data = await monday(pageQuery(rules), { board: [BOARD] }, token);
   const page = ((data.boards || [])[0] || {}).items_page || {};
   const items = [...(page.items || [])];
   let cursor = page.cursor;
   for (let i = 1; cursor && i < MAX_PAGES; i++) {
-    const next = (await monday(NEXT_Q, { cursor })).next_items_page || {};
+    const next = (await monday(NEXT_Q, { cursor }, token)).next_items_page || {};
     items.push(...(next.items || []));
     cursor = next.cursor;
   }
@@ -56,44 +57,41 @@ async function cached(key, fresh, load) {
 }
 
 /* Active collabs (everything but Canceled and Completed). */
-export function activeItems(userId, { fresh = false } = {}) {
-  checkId(userId);
-  return cached(`active:${userId}`, fresh, () => pageAll(ACTIVE_RULES(userId)));
+export function activeItems(user, { fresh = false } = {}) {
+  checkId(user.id);
+  return cached(`active:${user.id}`, fresh, () => pageAll(ACTIVE_RULES(user.id), user.token));
 }
 
 /* Active collabs plus Approved/Completed ones that finished in the last 180 days, for KPIs and Creators.
    If Monday rejects the date filter, fall back to the full history rather than failing the page. */
-export function kpiItems(userId, { fresh = false } = {}) {
-  checkId(userId);
-  return cached(`kpi:${userId}`, fresh, async () => {
+export function kpiItems(user, { fresh = false } = {}) {
+  checkId(user.id);
+  return cached(`kpi:${user.id}`, fresh, async () => {
     const from = new Date(Date.now() - HISTORY_DAYS * 864e5).toISOString().slice(0, 10);
-    const history = pageAll(HISTORY_RULES(userId, from)).catch((e) => {
+    const history = pageAll(HISTORY_RULES(user.id, from), user.token).catch((e) => {
       if (e.code !== "tool_error") throw e;
       console.warn("history date filter rejected, reading full history:", e.message);
-      return pageAll(HISTORY_RULES(userId, null));
+      return pageAll(HISTORY_RULES(user.id, null), user.token);
     });
-    const [active, done] = await Promise.all([activeItems(userId, { fresh }), history]);
+    const [active, done] = await Promise.all([activeItems(user, { fresh }), history]);
     const seen = new Set(active.map((it) => String(it.id)));
     return [...active, ...done.filter((it) => !seen.has(String(it.id)))];
   });
 }
 
-/* Back-compat for the briefing: "digest" = active, "kpi" = active + recent history. */
-export const listItems = (userId, kind = "digest") => (kind === "kpi" ? kpiItems(userId) : activeItems(userId));
-
-/* Latest updates for up to 100 items, keeping only items where userId is the CFS. */
-export async function updatesFor(ids, userId) {
-  const data = await monday(UPD_Q, { ids });
-  return (data.items || []).filter((it) => isCfs(it, userId)).map(({ column_values, ...it }) => it);
+/* Latest updates for up to 100 items, keeping only items where the user is the CFS. */
+export async function updatesFor(ids, user) {
+  const data = await monday(UPD_Q, { ids }, user.token);
+  return (data.items || []).filter((it) => isCfs(it, user.id)).map(({ column_values, ...it }) => it);
 }
 
 /* Updates for many items: batches of 50, up to six at once. Returns {id: updates[]}. */
-export async function updatesMap(ids, userId) {
+export async function updatesMap(ids, user) {
   const batches = [];
   for (let i = 0; i < ids.length; i += 50) batches.push(ids.slice(i, i + 50));
   const out = {};
   for (let i = 0; i < batches.length; i += 6) {
-    const results = await Promise.all(batches.slice(i, i + 6).map((b) => updatesFor(b, userId)));
+    const results = await Promise.all(batches.slice(i, i + 6).map((b) => updatesFor(b, user)));
     results.flat().forEach((x) => { out[String(x.id)] = x.updates || []; });
   }
   return out;

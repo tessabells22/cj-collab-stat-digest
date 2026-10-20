@@ -1,6 +1,8 @@
 /* App shell: fills the sidebar and top bar, owns the theme toggle, the avatar menu and the
    sign-in screen. Load it right before the page's own script so the elements it creates
-   (#signout, #gate, #gateDomain, #gateErr) exist when the page wires them up.
+   (#signout, #gate, #gateDomain, #gateErr) exist when the page wires them up. Also owns the
+   "Connect your Monday.com" screen, shown over any page but the guide until the person pastes
+   their own Monday token.
    <body data-page="digest" data-crumb="My collabs" data-auth="public|required"> */
 (function () {
   const store = { get(k) { try { return localStorage.getItem(k) } catch (e) { return null } }, set(k, v) { try { localStorage.setItem(k, v) } catch (e) {} } };
@@ -62,7 +64,7 @@
       <button type="button" class="iconbtn" id="themeBtn"></button>
       <a class="signin-link" id="signinLink" href="/api/auth/login" hidden>Sign in</a>
       <button type="button" class="avatar" id="avatarBtn" aria-haspopup="true" aria-expanded="false" hidden></button>
-      <div class="usermenu" id="userMenu" hidden><div><div class="who-name" id="whoName"></div><div class="who-mail" id="whoMail"></div></div><button type="button" id="signout">Sign out</button></div>
+      <div class="usermenu" id="userMenu" hidden><div><div class="who-name" id="whoName"></div><div class="who-mail" id="whoMail"></div><div class="who-mail" id="whoMonday"></div></div><button type="button" id="mondayBtn">Change Monday.com token</button><button type="button" id="signout">Sign out</button></div>
     </div>`;
   setMode(store.get("cd.mode") || "dark");
   document.getElementById("themeBtn").onclick = () => setMode(document.documentElement.dataset.mode === "dark" ? "light" : "dark");
@@ -89,6 +91,57 @@
       <p class="gate-foot">Internal ContentJet tool. Access is limited to company Google Workspace accounts.</p></div>`);
   }
 
+  /* connect Monday.com: each person reads the board with their own personal API token */
+  body.insertAdjacentHTML("beforeend", `<div class="gate connect" id="connect" role="dialog" aria-modal="true" aria-labelledby="connectTitle" hidden>
+    <div class="brand"><span class="bolt"><svg viewBox="0 0 24 24" fill="#fff"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></span>ContentJet · CFS Tools</div>
+    <form class="gate-card" id="connectForm" autocomplete="off">
+      <h1 id="connectTitle">Connect your Monday.com</h1>
+      <p>Collab Digest reads the Production board with your own Monday.com token, so you see the collabs you can see in Monday.</p>
+      <ol class="connect-steps">
+        <li>In Monday.com, click your avatar (bottom left), then <b>Developers</b>.</li>
+        <li>Open <b>My access tokens</b>, press <b>Show</b>, then <b>Copy</b>.</li>
+        <li>Paste it here.</li>
+      </ol>
+      <label class="sr" for="connectToken">Monday.com API token</label>
+      <input type="password" id="connectToken" class="connect-input" placeholder="Paste your token" spellcheck="false" autocapitalize="off" required>
+      <button type="submit" class="gbtn" id="connectGo">Connect</button>
+      <p class="connect-small">Collab Digest only uses it to read the board, never to change anything. It's kept sealed in a cookie on this browser (signing out removes it), and on the server only if you get the morning Slack briefing.</p>
+      <div class="connect-links"><a href="/guide#token">Help</a><button type="button" id="connectCancel" hidden>Cancel</button><button type="button" id="connectOff" hidden>Disconnect</button><button type="button" id="connectOut">Sign out</button></div>
+    </form>
+    <div class="note err" id="connectErr" hidden></div>
+  </div>`);
+  const connect = document.getElementById("connect");
+  const connectErr = msg => { const el = document.getElementById("connectErr"); el.textContent = msg || ""; el.hidden = !msg; };
+  const dropCache = () => { try { Object.keys(localStorage).filter((k) => k.startsWith("cd.cache.")).forEach((k) => localStorage.removeItem(k)); } catch (e) {} };
+  const post = (path, method, data) => fetch(path, { method, headers: { "content-type": "application/json" }, credentials: "same-origin", body: data ? JSON.stringify(data) : undefined })
+    .then(r => r.json().catch(() => ({})).then(j => { if (!r.ok) throw j.error || { message: "Something went wrong. Try again." }; return j; }));
+  function showConnect(msg, { canCancel = false, connected = false } = {}) {
+    if (page === "guide" && !canCancel) return;
+    menu.hidden = true;
+    document.getElementById("connectCancel").hidden = !canCancel;
+    document.getElementById("connectOff").hidden = !connected;
+    connectErr(msg);
+    connect.hidden = false;
+    body.classList.add("connecting");
+    setTimeout(() => document.getElementById("connectToken").focus(), 0);
+  }
+  document.getElementById("connectForm").onsubmit = async e => {
+    e.preventDefault();
+    const go = document.getElementById("connectGo"), input = document.getElementById("connectToken");
+    go.disabled = true; go.textContent = "Checking…"; connectErr("");
+    try {
+      await post("/api/auth/monday-token", "POST", { token: input.value.trim() });
+      input.value = ""; dropCache(); location.reload();
+    } catch (err) {
+      connectErr(err.message || "Couldn't connect. Try again.");
+      go.disabled = false; go.textContent = "Connect";
+    }
+  };
+  document.getElementById("connectCancel").onclick = () => { connect.hidden = true; body.classList.remove("connecting"); connectErr(""); };
+  document.getElementById("connectOff").onclick = async () => { try { await post("/api/auth/monday-token", "DELETE"); } catch (e) {} dropCache(); location.reload(); };
+  document.getElementById("connectOut").onclick = () => document.getElementById("signout").click();
+  document.getElementById("mondayBtn").onclick = () => showConnect("", { canCancel: true, connected: true });
+
   /* who is signed in: fills the avatar; public pages show themselves straight away */
   const initials = s => String(s || "").split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("") || "?";
   window.Shell = {
@@ -107,10 +160,18 @@
       document.getElementById("whoName").textContent = user.name || "";
       document.getElementById("whoMail").textContent = user.email || "";
     },
+    /* called by collabs.js when Monday says the token is missing or no longer works */
+    connectMonday(code) {
+      showConnect(code === "monday_token" ? "Monday.com stopped accepting your token. It may have been regenerated. Paste the current one." : "");
+    },
   };
   window.Shell.config.then(cfg => {
     window.Shell.setUser(cfg.signedIn ? cfg.user : null);
     if (cfg.domain) document.getElementById("gateDomain").textContent = "@" + cfg.domain;
+    if (cfg.signedIn) {
+      document.getElementById("whoMonday").textContent = cfg.monday ? "Monday.com: " + cfg.monday.name : "Monday.com not connected";
+      if (!cfg.monday) showConnect("");
+    }
     if (body.dataset.auth === "public") app.hidden = false;
   });
 })();

@@ -397,8 +397,8 @@ let rsT,lastW=0;addEventListener("resize",()=>{clearTimeout(rsT);rsT=setTimeout(
 /* ---------- loading & auth (same API and session as the digest) ---------- */
 function errCopy(e){
   switch(e&&e.code){
-    case"no_monday_user":return(e.message||"Your Google email doesn't match a Monday.com user.")+" Ask Tessa to check.";
-    case"monday_token":return"The site's Monday.com connection stopped working. Ask Tessa to update the Monday token in Vercel.";
+    case"monday_not_connected":return"Connect your Monday.com account to load your KPIs.";
+    case"monday_token":return"Monday.com stopped accepting your token. Paste the current one from Monday.com (avatar → Developers → My access tokens).";
     case"rate_limited":return"Monday.com is rate-limiting requests. Try Refresh in a minute.";
     case"server_unavailable":return"Monday.com didn't answer in time. Press Refresh to try again.";
     default:return"Couldn't load from Monday.com"+(e&&e.message?": "+e.message:"")+". Press Refresh to try again.";

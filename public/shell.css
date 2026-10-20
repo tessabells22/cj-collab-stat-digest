@@ -87,3 +87,20 @@
 .gbtn svg{width:18px;height:18px}
 .gate .note{max-width:400px;width:100%;text-align:left}
 .gate-foot{max-width:340px;text-align:center;font-size:12px;color:var(--muted)}
+
+/* Connect Monday.com: covers the page until a token is saved */
+.connect{position:fixed;inset:0;z-index:60;background:var(--ink);overflow-y:auto}
+body.connecting{overflow:hidden}
+.connect .gate-card{max-width:440px;align-items:stretch;text-align:left}
+.connect .gate-card h1{text-align:center}
+.connect-steps{margin:6px 0 4px;padding-left:20px;color:var(--muted);font-size:14px;line-height:1.55}
+.connect-steps b{color:var(--text);font-weight:600}
+.connect-input{margin-top:8px;width:100%;font:500 14px var(--f-body);padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--deck-2);color:var(--text)}
+.connect-input:focus{outline:2px solid var(--accent,#7C5CFC);outline-offset:1px}
+.connect .gbtn{border:0;cursor:pointer;margin-top:10px}
+.connect .gbtn:disabled{opacity:.6;cursor:default}
+.connect-small{font-size:12.5px!important}
+.connect-links{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;margin-top:6px;font-size:13px}
+.connect-links a,.connect-links button{appearance:none;background:none;border:0;padding:0;color:var(--muted);font:500 13px var(--f-body);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.connect-links a:hover,.connect-links button:hover{color:var(--text)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}

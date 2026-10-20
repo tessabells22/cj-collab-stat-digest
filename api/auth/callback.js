@@ -1,6 +1,6 @@
 // Google sends the user back here. We swap the code for an ID token, check the Workspace domain,
 // then set our own signed session cookie.
-import { getCookie, clearCookie, sessionCookie, STATE_COOKIE, redirectUri, allowedDomain, missingConfig, mondayUser } from "../_lib.js";
+import { getCookie, clearCookie, sessionCookie, STATE_COOKIE, redirectUri, allowedDomain, missingConfig } from "../_lib.js";
 
 function back(request, error, cookies = []) {
   const to = new URL("/", request.url);
@@ -52,8 +52,5 @@ export async function GET(request) {
   if (!issOk || claims.aud !== process.env.GOOGLE_CLIENT_ID || claims.exp * 1000 < Date.now()) return back(request, "exchange");
   if (!claims.email_verified || claims.hd !== domain || !email.endsWith("@" + domain)) return back(request, "wrong_domain");
 
-  /* remember the Monday user so page loads skip the lookup; if Monday is down, the pages look it up later */
-  let mid, mname;
-  try { const u = await mondayUser(email); mid = u.id; mname = u.name; } catch {}
-  return back(request, null, [sessionCookie({ email, name: claims.name || email, mid, mname })]);
+  return back(request, null, [sessionCookie({ email, name: claims.name || email })]);
 }
