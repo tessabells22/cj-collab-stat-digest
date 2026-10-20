@@ -202,7 +202,7 @@ function onBoth(){
 function loadErr(e){
   if(e&&e.code==="not_signed_in"){showGate("Your session ended. Sign in again.");return}
   if(people.length){$("freshText").textContent+=" · couldn't refresh";return}
-  $("freshText").textContent="Couldn't load";showNote(e&&e.code==="no_monday_user"?"Your Google email doesn't match a Monday.com user. Ask Tessa to check.":"Couldn't load from Monday.com. Press Refresh to try again.",true);
+  $("freshText").textContent="Couldn't load";showNote(e&&e.code==="monday_token"?"Monday.com stopped accepting your token. Paste the current one from Monday.com (avatar → Developers → My access tokens).":"Couldn't load from Monday.com. Press Refresh to try again.",true);
 }
 async function refreshNow(){
   if(busy)return;busy=true;const b=$("refresh");b.disabled=true;b.classList.add("spin");$("freshText").textContent="Refreshing…";

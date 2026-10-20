@@ -15,7 +15,8 @@ All pages share one app shell (left sidebar, top bar with breadcrumb, theme togg
 - `public/app.css` holds the styles the digest, KPI and Home pages share
 - `api/` holds the serverless functions:
   - `api/auth/*` handles Google sign-in, limited to one Workspace domain (`ALLOWED_EMAIL_DOMAIN`). The session is a signed, HttpOnly cookie that lasts 30 days.
-  - `api/monday.js` reads the Production board with one server-side Monday.com token. It looks up the Monday user whose email matches the Google login and only returns collabs where that person is the CFS. The queries are fixed server-side and nothing writes to Monday.
+  - `api/auth/monday-token.js` connects each person's own Monday.com personal API token. After Google sign-in the page asks for it (Monday.com avatar → Developers → My access tokens), checks it with Monday, and keeps it in an AES-256-GCM sealed, HttpOnly cookie tied to that Google account. The avatar menu shows which Monday account is connected and lets you change or disconnect it.
+  - `api/monday.js` reads the Production board with the signed-in person's token and only returns collabs where the token's owner is the CFS. The queries are fixed server-side and nothing writes to Monday.
   - `api/_briefing.js`, `api/cron/briefing.js` and `api/briefing/test.js` send the morning Slack briefing (see below). The briefing runs the browser's own `public/collabs.js` on the server, so its counts match the digest.
   - `api/rewrite.js` powers "Rewrite with Claude" (optional).
 
@@ -30,11 +31,11 @@ All pages share one app shell (left sidebar, top bar with breadcrumb, theme togg
    - Authorized redirect URI: `https://<your-vercel-domain>/api/auth/callback`
 4. Copy the Client ID and Client secret.
 
-### 2. Monday.com token
+### 2. Monday.com tokens
 
-The server reads Monday with one token. Use an account that can see the Production board, ideally one that won't leave the company (a shared ops account is better than a person's). In Monday: avatar → Developers → My access tokens → copy.
+Nothing to set up on the server. Each CFS pastes their own personal API token the first time they sign in, once per browser. The Production board only shows members the items assigned to them, so a shared member token can't see everyone's collabs, and each person's own token sees exactly what they see in Monday.
 
-Everyone's Monday.com email must match their Google email, since that's how the page finds "your" collabs.
+A personal token can do anything its owner can do in Monday. The app only sends the fixed read queries in `api/_collabs.js`, the token never reaches page JavaScript, and it's encrypted with a key derived from `SESSION_SECRET`. Changing `SESSION_SECRET` makes everyone sign in and reconnect. If someone regenerates their token in Monday, the page asks for the new one.
 
 ### 3. Vercel
 
@@ -43,7 +44,6 @@ Everyone's Monday.com email must match their Google email, since that's how the 
    - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
    - `ALLOWED_EMAIL_DOMAIN` = `contentjet.io`
    - `SESSION_SECRET`: a long random string (`openssl rand -base64 32`)
-   - `MONDAY_API_TOKEN`
    - `ANTHROPIC_API_KEY` (optional): turns on "Rewrite with Claude"
 3. Deploy. If anything is missing, the sign-in page lists which variables to add.
 
@@ -51,28 +51,33 @@ Everyone's Monday.com email must match their Google email, since that's how the 
 
 Each person on the list gets a Slack DM at 7:30 AM Eastern on weekdays with their Needs you / Due today / Late counts and top three collabs.
 
+The scheduled run has no browser and so no cookie, so it reads Monday with tokens saved in a small Redis store. Only people on `BRIEFING_EMAILS` have their token saved, encrypted, when they connect Monday or press **Send me a test now**. Without the store, "Send me a test now" still works (it uses the token on that browser) but nothing goes out at 7:30.
+
 1. Go to api.slack.com/apps → **Create New App** → **From scratch**, name it "Collab Digest" and pick your workspace.
 2. **OAuth & Permissions** → **Bot Token Scopes**: add `chat:write`, `users:read`, `users:read.email`.
 3. **App Home** → turn on the **Messages Tab** so the DMs show up.
 4. **Install to Workspace** (a Slack admin may need to approve it) and copy the **Bot User OAuth Token** (`xoxb-…`).
-5. In Vercel add `SLACK_BOT_TOKEN`, `BRIEFING_EMAILS` (comma-separated company emails), and `CRON_SECRET` (a long random string; Vercel sends it with each scheduled call). Redeploy.
-6. On Home, press **Send me a test now** to check it reaches you.
+5. In Vercel add `SLACK_BOT_TOKEN`, `BRIEFING_EMAILS` (comma-separated company emails), and `CRON_SECRET` (a long random string; Vercel sends it with each scheduled call).
+6. In Vercel → **Storage** (or Marketplace) → **Upstash Redis** → create a free database and connect it to this project. That adds `KV_REST_API_URL` and `KV_REST_API_TOKEN`. Redeploy.
+7. Each person on the list opens Home and presses **Send me a test now** once. That checks Slack reaches them and saves their token for the 7:30 run. Someone added to the list later does the same.
+
+"Disconnect" in the account menu removes the saved token too; plain sign-out keeps it so the DM keeps coming. Taking someone off `BRIEFING_EMAILS` stops their DM; their saved token stays until they disconnect.
 
 Timing: Vercel Cron runs in UTC, so `vercel.json` schedules 11:30 and 12:30 UTC on weekdays and the function only sends on the run that lands at 7 AM in New York. That keeps 7:30 AM Eastern through both EST and EDT. On Vercel's Hobby plan a scheduled run can fire anywhere within its hour; Pro runs on time.
 
-Each person's Slack email must match their Google and Monday.com email. Collabs marked "handled" in the digest are saved per browser, so the briefing still counts them.
+Each person's Slack email must match their Google email. Collabs marked "handled" in the digest are saved per browser, so the briefing still counts them.
 
 ## Loading speed
 
 - Each page keeps a saved copy of your last data in the browser and shows it straight away, then swaps in the fresh read. Signing out deletes the saved copies.
 - `/api/monday` `op:"digest"` returns active collabs and their latest updates in one request. The browser sends the `updated_at` of items it already has updates for, so refreshes only re-read updates for collabs that changed; update batches run in parallel.
 - The server keeps each person's list for 45 seconds, so moving between pages doesn't re-read Monday. Refresh buttons skip it.
-- The Monday user id is stored in the session at sign-in, which saves a lookup on every request.
+- The Monday user id is stored with the token when it's connected, which saves a lookup on every request.
 - KPIs and Creators read active collabs plus Approved/Completed ones from the last 180 days, in parallel, instead of the whole history.
 
 ## Differences from the claude.ai version
 
-- **Sign-in** is company Google, not the claude.ai Monday connector. Monday is read with one shared token, and the server filters to the signed-in person's collabs.
+- **Sign-in** is company Google, not the claude.ai Monday connector. Monday is read with each person's own personal API token instead.
 - **Handled marks** are saved per browser (localStorage). The claude.ai version also synced them across devices; bringing that back needs a database such as Upstash Redis.
 - **Rewrite with Claude** calls the Anthropic API with your key, so it's billed to that key. Only signed-in company accounts can call it.
 

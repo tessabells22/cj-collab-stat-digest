@@ -226,7 +226,7 @@ function onData(raw,meta){
   }catch(e){
     if(e&&e.code==="not_signed_in"){showGate("Your session ended. Sign in again.");return}
     if(started){$("freshText").textContent+=" · couldn't refresh";return}
-    $("freshText").textContent="Couldn't load";showNote(e&&e.code==="no_monday_user"?"Your Google email doesn't match a Monday.com user. Ask Tessa to check.":"Couldn't load your collabs from Monday.com. Try again in a minute.",true);
+    $("freshText").textContent="Couldn't load";showNote(e&&e.code==="monday_token"?"Monday.com stopped accepting your token. Paste the current one from Monday.com (avatar → Developers → My access tokens).":"Couldn't load your collabs from Monday.com. Try again in a minute.",true);
   }
 })();
 Shell.config.then(cfg=>{aiOn=!!cfg.ai;$("aiBtn").hidden=!aiOn});

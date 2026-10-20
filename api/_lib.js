@@ -1,10 +1,12 @@
 // Shared helpers for the API routes. Files starting with "_" are not deployed as routes.
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, createHash, createCipheriv, createDecipheriv, randomBytes, timingSafeEqual } from "node:crypto";
 
 const MONDAY_URL = "https://api.monday.com/v2";
 export const SESSION_COOKIE = "cd_session";
 export const STATE_COOKIE = "cd_oauth_state";
+export const TOKEN_COOKIE = "cd_mt";
 const SESSION_DAYS = 30;
+const TOKEN_DAYS = 180;
 
 export class AppError extends Error {
   constructor(code, message, status = 502) {
@@ -44,7 +46,7 @@ export const clearCookie = (name) => setCookie(name, "", 0);
 export const allowedDomain = () => (process.env.ALLOWED_EMAIL_DOMAIN || "").trim().toLowerCase().replace(/^@/, "");
 export const aiEnabled = () => !!process.env.ANTHROPIC_API_KEY;
 export const missingConfig = () =>
-  ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "SESSION_SECRET", "ALLOWED_EMAIL_DOMAIN", "MONDAY_API_TOKEN"].filter((k) => !process.env[k]);
+  ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "SESSION_SECRET", "ALLOWED_EMAIL_DOMAIN"].filter((k) => !process.env[k]);
 
 export function redirectUri(request) {
   return process.env.GOOGLE_REDIRECT_URI || new URL("/api/auth/callback", request.url).toString();
@@ -55,8 +57,8 @@ export function redirectUri(request) {
 const b64 = (s) => Buffer.from(s).toString("base64url");
 const sign = (data) => createHmac("sha256", process.env.SESSION_SECRET).update(data).digest("base64url");
 
-export function sessionCookie({ email, name, mid, mname }) {
-  const payload = b64(JSON.stringify({ email, name, mid, mname, exp: Date.now() + SESSION_DAYS * 864e5 }));
+export function sessionCookie({ email, name }) {
+  const payload = b64(JSON.stringify({ email, name, exp: Date.now() + SESSION_DAYS * 864e5 }));
   return setCookie(SESSION_COOKIE, `${payload}.${sign(payload)}`, SESSION_DAYS * 86400);
 }
 
@@ -85,27 +87,66 @@ export function requireSession(request) {
   return s;
 }
 
-/* ---------- Monday.com, read with the shared server token ---------- */
+/* ---------- each person's Monday.com token, sealed with AES-256-GCM ----------
+   The key comes from SESSION_SECRET, so the token is unreadable in the browser and in storage. */
 
-export async function monday(query, variables = {}) {
-  const token = process.env.MONDAY_API_TOKEN;
-  if (!token) throw new AppError("not_configured", "MONDAY_API_TOKEN isn't set on the server.", 500);
+const sealKey = () => createHash("sha256").update("cd-monday-token:" + process.env.SESSION_SECRET).digest();
+
+export function seal(obj) {
+  const iv = randomBytes(12);
+  const c = createCipheriv("aes-256-gcm", sealKey(), iv);
+  const data = Buffer.concat([c.update(JSON.stringify(obj), "utf8"), c.final()]);
+  return [iv, c.getAuthTag(), data].map((b) => b.toString("base64url")).join(".");
+}
+
+export function unseal(str) {
+  try {
+    const [iv, tag, data] = String(str || "").split(".").map((x) => Buffer.from(x, "base64url"));
+    const d = createDecipheriv("aes-256-gcm", sealKey(), iv);
+    d.setAuthTag(tag);
+    return JSON.parse(Buffer.concat([d.update(data), d.final()]).toString("utf8"));
+  } catch {
+    return null;
+  }
+}
+
+/* The cookie holds {email, token, id, name}: the Google email it belongs to and the Monday user the token is for. */
+export const tokenCookie = (t) => setCookie(TOKEN_COOKIE, seal(t), TOKEN_DAYS * 86400);
+
+/* The signed-in person's Monday user and token, or null if they haven't connected Monday on this browser. */
+export function readMonday(request, session) {
+  if (!process.env.SESSION_SECRET) return null;
+  const t = unseal(getCookie(request, TOKEN_COOKIE));
+  if (!t || !t.token || !/^\d+$/.test(String(t.id)) || String(t.email).toLowerCase() !== String(session.email).toLowerCase()) return null;
+  return { id: String(t.id), name: t.name, token: t.token };
+}
+
+export function requireMonday(request, session) {
+  const m = readMonday(request, session);
+  if (!m) throw new AppError("monday_not_connected", "Connect your Monday.com account first.", 401);
+  return m;
+}
+
+/* ---------- Monday.com, read with the person's own token ---------- */
+
+export async function monday(query, variables, token) {
+  if (!token) throw new AppError("monday_not_connected", "Connect your Monday.com account first.", 401);
   const headers = { "content-type": "application/json", authorization: token };
   if (process.env.MONDAY_API_VERSION) headers["API-Version"] = process.env.MONDAY_API_VERSION;
   let r;
   try {
-    r = await fetch(MONDAY_URL, { method: "POST", headers, body: JSON.stringify({ query, variables }) });
+    r = await fetch(MONDAY_URL, { method: "POST", headers, body: JSON.stringify({ query, variables: variables || {} }) });
   } catch {
     throw new AppError("server_unavailable", "Monday.com could not be reached.", 503);
   }
-  if (r.status === 401 || r.status === 403) throw new AppError("monday_token", "The server's Monday.com token was rejected.", 502);
+  if (r.status === 401 || r.status === 403) throw new AppError("monday_token", "Monday.com didn't accept your token.", 401);
   if (r.status === 429) throw new AppError("rate_limited", "Monday.com rate limit reached.", 429);
   let body;
   try { body = await r.json(); } catch { throw new AppError("server_unavailable", `Monday.com returned ${r.status}.`, 503); }
   const errs = body.errors || (body.error_message ? [{ message: body.error_message }] : null);
   if (errs && errs.length) {
     const msg = errs.map((e) => e.message).join("; ");
-    if (/not authenticated|unauthorized|invalid token/i.test(msg)) throw new AppError("monday_token", msg, 502);
+    if (/not authenticated|unauthorized|invalid token/i.test(msg)) throw new AppError("monday_token", "Monday.com didn't accept your token.", 401);
     if (/complexity|rate limit/i.test(msg)) throw new AppError("rate_limited", msg, 429);
     throw new AppError("tool_error", msg, 502);
   }
@@ -113,29 +154,16 @@ export async function monday(query, variables = {}) {
   return body.data || {};
 }
 
-/* Maps a signed-in Google email to the Monday.com user with the same email. */
-const userCache = new Map();
-export async function mondayUser(email) {
-  const key = email.toLowerCase();
-  const hit = userCache.get(key);
-  if (hit && hit.at > Date.now() - 36e5) return hit.user;
-  const data = await monday("query($e:[String!]){ users(emails:$e){ id name email } }", { e: [email] });
-  const user = (data.users || []).find((u) => String(u.email || "").toLowerCase() === key);
-  if (!user) throw new AppError("no_monday_user", `No Monday.com user has the email ${email}.`, 403);
-  userCache.set(key, { user, at: Date.now() });
-  return user;
-}
-
-/* The Monday user for a session. Sign-in stores the Monday id in the session, which saves a Monday
-   lookup on every request; older sessions without it fall back to the email lookup. */
-export function sessionUser(session) {
-  if (session.mid && /^\d+$/.test(String(session.mid))) return Promise.resolve({ id: String(session.mid), name: session.mname || session.name, email: session.email });
-  return mondayUser(session.email);
+/* Who a token belongs to. */
+export async function whoAmI(token) {
+  const me = (await monday("query{ me{ id name email } }", {}, token)).me;
+  if (!me || !/^\d+$/.test(String(me.id))) throw new AppError("monday_token", "Monday.com didn't accept your token.", 401);
+  return { id: String(me.id), name: me.name, email: me.email };
 }
 
 export function errorResponse(e) {
   if (e instanceof AppError) {
-    const headers = e.code === "not_signed_in" ? { "set-cookie": clearCookie(SESSION_COOKIE) } : {};
+    const headers = e.code === "not_signed_in" ? { "set-cookie": clearCookie(SESSION_COOKIE) } : e.code === "monday_token" ? { "set-cookie": clearCookie(TOKEN_COOKIE) } : {};
     return json({ error: { code: e.code, message: e.message } }, e.status, headers);
   }
   console.error(e);

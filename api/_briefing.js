@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { fileURLToPath } from "node:url";
-import { mondayUser, allowedDomain, AppError } from "./_lib.js";
+import { allowedDomain, AppError } from "./_lib.js";
 import { activeItems, updatesMap } from "./_collabs.js";
 
 export const slackEnabled = () => !!process.env.SLACK_BOT_TOKEN;
@@ -22,12 +22,12 @@ function loadRules() {
   return rules;
 }
 
-export async function buildBriefing(email) {
+/* user = {id, name, token}: the person's Monday user and their own token */
+export async function buildBriefing(user) {
   const R = loadRules();
-  const user = await mondayUser(email);
-  const items = (await activeItems(user.id, { fresh: true })).map((it) => ({ ...it, id: String(it.id) }));
+  const items = (await activeItems(user, { fresh: true })).map((it) => ({ ...it, id: String(it.id) }));
   const active = items.filter((it) => { const s = R.cv(it, R.COL.stage); return !R.finishedByColumns(s, R.SUB[s] ? R.cv(it, R.SUB[s]) : ""); });
-  const upd = await updatesMap(active.map((x) => x.id), user.id);
+  const upd = await updatesMap(active.map((x) => x.id), user);
   const updates = new Map(Object.entries(upd));
   const groups = Object.fromEntries(R.GROUPS.map((g) => [g.key, []]));
   active.forEach((it) => { const row = R.buildRow(it, updates.get(it.id), { id: user.id, name: user.name }); if (row) groups[row.group].push(row); });
@@ -37,7 +37,7 @@ export async function buildBriefing(email) {
   const top = [...groups.needsYou, ...groups.dueToday, ...groups.late]
     .sort((a, b) => (order[a.group] - order[b.group]) || (b.mentionsMe - a.mentionsMe) || ((b.daysLate || 0) - (a.daysLate || 0)) || (due(a) - due(b)))
     .slice(0, 3);
-  return { user, groups, top, active: Object.values(groups).flat().length };
+  return { user: { id: user.id, name: user.name }, groups, top, active: Object.values(groups).flat().length };
 }
 
 const slackText = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -77,12 +77,12 @@ async function slack(method, { query, body } = {}) {
   return j;
 }
 
-/* Builds and sends one person's briefing. Returns the counts for logging. */
-export async function sendBriefing(email) {
+/* Builds and sends one person's briefing with their Monday user {id, name, token}. Returns the counts for logging. */
+export async function sendBriefing(email, mondayUser) {
   if (!slackEnabled()) throw new AppError("slack_disabled", "SLACK_BOT_TOKEN isn't set.", 500);
   const domain = allowedDomain();
   if (!domain || !String(email).toLowerCase().endsWith("@" + domain)) throw new AppError("bad_recipient", `${email} isn't a company address.`, 400);
-  const b = await buildBriefing(email);
+  const b = await buildBriefing(mondayUser);
   const { user } = await slack("users.lookupByEmail", { query: { email } });
   await slack("chat.postMessage", { body: { channel: user.id, unfurl_links: false, ...briefingBlocks(b) } });
   return { email, needsYou: b.groups.needsYou.length, dueToday: b.groups.dueToday.length, late: b.groups.late.length };

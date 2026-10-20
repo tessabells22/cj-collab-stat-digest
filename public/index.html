@@ -96,7 +96,9 @@
 function showBriefing(cfg){
   if(!cfg.briefing)return;
   const el=document.getElementById("brief");el.hidden=false;
-  el.innerHTML=`<span>${cfg.briefingMe?"You get this in Slack at 7:30 AM Eastern on weekdays.":"Morning Slack briefing: 7:30 AM Eastern on weekdays. Ask Tessa to add you."}</span><button type="button" id="testBrief">Send me a test now</button><span id="briefMsg" role="status"></span>`;
+  const line=cfg.briefingMe?"You get this in Slack at 7:30 AM Eastern on weekdays.":
+    cfg.briefingScheduled?"Morning Slack briefing: 7:30 AM Eastern on weekdays. Ask Tessa to add you.":"Get today's briefing as a Slack DM.";
+  el.innerHTML=`<span>${line}</span><button type="button" id="testBrief">Send me a test now</button><span id="briefMsg" role="status"></span>`;
   document.getElementById("testBrief").onclick=async e=>{
     const b=e.currentTarget,m=document.getElementById("briefMsg");b.disabled=true;m.textContent="Sending…";
     try{await api("/api/briefing/test");m.textContent="Sent. Check your Slack DMs."}
@@ -117,8 +119,8 @@ async function loadToday(){
   }catch(e){
     if(e&&e.code==="not_signed_in"){location.reload();return}
     if(shown){$("todayWhen").textContent+=" · couldn't refresh";return}
-    const msg=e&&e.code==="no_monday_user"?"Your Google email doesn't match a Monday.com user. Ask Tessa to check.":
-      e&&e.code==="monday_token"?"The site's Monday.com connection stopped working. Ask Tessa to update the token.":
+    const msg=e&&e.code==="monday_not_connected"?"Connect your Monday.com account to see today's numbers.":
+      e&&e.code==="monday_token"?"Monday.com stopped accepting your token. Paste the current one from Monday.com (avatar → Developers → My access tokens).":
       "Couldn't load today's numbers from Monday.com. Open My collabs or try again in a minute.";
     $("todayWhen").textContent="Not loaded";$("counts").innerHTML="";$("todayMeta").innerHTML="";
     $("next").innerHTML=`<p class="empty-day">${esc(msg)}</p>`;

@@ -115,7 +115,11 @@ async function api(path,body){
   try{r=await fetch(path,{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify(body||{})})}
   catch(e){throw{code:"server_unavailable"}}
   const data=await r.json().catch(()=>({}));
-  if(!r.ok)throw data.error||{code:"server_unavailable",message:"HTTP "+r.status};
+  if(!r.ok){
+    const err=data.error||{code:"server_unavailable",message:"HTTP "+r.status};
+    if((err.code==="monday_not_connected"||err.code==="monday_token")&&window.Shell&&Shell.connectMonday)Shell.connectMonday(err.code);
+    throw err;
+  }
   return data;
 }
 /* Active collabs + their latest updates in one request. prev is the last raw copy (or null): updates
@@ -153,6 +157,7 @@ async function swr(kind,loader,render){
   const freshP=loader(saved&&saved.data);freshP.catch(()=>{});
   const cfg=await Shell.config;
   if(!cfg.signedIn)return cfg;
+  if(!cfg.monday)return cfg;   /* the shell shows "Connect your Monday.com" */
   swr.email=cfg.user.email;
   document.getElementById("app").hidden=false;
   if(saved&&saved.email===swr.email)render(saved.data,{cached:true,at:saved.at});

@@ -105,8 +105,8 @@ function showNote(t,err){const n=$("note");n.textContent=t;n.className="note"+(e
 function errCopy(e){
   switch(e&&e.code){
     case"not_signed_in":return"Your session ended. Sign in again.";
-    case"no_monday_user":return(e.message||"Your Google email doesn't match a Monday.com user.")+" Your Monday.com account needs to use the same email as your Google login. Ask Tessa to check.";
-    case"monday_token":return"The site's Monday.com connection stopped working. Ask Tessa to update the Monday token in Vercel.";
+    case"monday_not_connected":return"Connect your Monday.com account to load your collabs.";
+    case"monday_token":return"Monday.com stopped accepting your token. Paste the current one from Monday.com (avatar → Developers → My access tokens).";
     case"not_configured":return"The site isn't fully set up yet ("+(e.message||"missing settings")+").";
     case"rate_limited":return"Monday.com is rate-limiting requests. Showing the last good data; it will retry on the next refresh.";
     case"server_unavailable":return"Monday.com didn't answer in time. Showing the last good data; it will retry on the next refresh.";
@@ -115,7 +115,7 @@ function errCopy(e){
   }
 }
 const SIGNED_OUT=["not_signed_in"];
-const BLOCKING=["no_monday_user","monday_token","not_configured"];
+const BLOCKING=["monday_not_connected","monday_token","not_configured"];
 function onError(e){
   if(SIGNED_OUT.includes(e&&e.code)){showSignIn(errCopy(e));return}
   if(BLOCKING.includes(e&&e.code)&&!current){$("main").innerHTML=`<div class="empty"><h3>Can't load your collabs</h3><p>${esc(errCopy(e))}</p></div>`;$("tabs").innerHTML="";$("count").textContent=""}
