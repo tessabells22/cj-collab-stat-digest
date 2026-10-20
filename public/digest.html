@@ -106,7 +106,7 @@ function errCopy(e){
   switch(e&&e.code){
     case"not_signed_in":return"Your session ended. Sign in again.";
     case"monday_not_connected":return"Connect your Monday.com account to load your collabs.";
-    case"monday_token":return"Monday.com stopped accepting your token. Paste the current one from Monday.com (avatar → Developers → My access tokens).";
+    case"monday_token":return"Monday.com stopped accepting your token. Paste the current one from Monday.com (avatar (top right) → Developers → API token).";
     case"not_configured":return"The site isn't fully set up yet ("+(e.message||"missing settings")+").";
     case"rate_limited":return"Monday.com is rate-limiting requests. Showing the last good data; it will retry on the next refresh.";
     case"server_unavailable":return"Monday.com didn't answer in time. Showing the last good data; it will retry on the next refresh.";

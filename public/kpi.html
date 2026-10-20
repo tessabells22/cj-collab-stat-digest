@@ -398,7 +398,7 @@ let rsT,lastW=0;addEventListener("resize",()=>{clearTimeout(rsT);rsT=setTimeout(
 function errCopy(e){
   switch(e&&e.code){
     case"monday_not_connected":return"Connect your Monday.com account to load your KPIs.";
-    case"monday_token":return"Monday.com stopped accepting your token. Paste the current one from Monday.com (avatar → Developers → My access tokens).";
+    case"monday_token":return"Monday.com stopped accepting your token. Paste the current one from Monday.com (avatar (top right) → Developers → API token).";
     case"rate_limited":return"Monday.com is rate-limiting requests. Try Refresh in a minute.";
     case"server_unavailable":return"Monday.com didn't answer in time. Press Refresh to try again.";
     default:return"Couldn't load from Monday.com"+(e&&e.message?": "+e.message:"")+". Press Refresh to try again.";

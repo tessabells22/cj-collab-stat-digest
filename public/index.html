@@ -120,7 +120,7 @@ async function loadToday(){
     if(e&&e.code==="not_signed_in"){location.reload();return}
     if(shown){$("todayWhen").textContent+=" · couldn't refresh";return}
     const msg=e&&e.code==="monday_not_connected"?"Connect your Monday.com account to see today's numbers.":
-      e&&e.code==="monday_token"?"Monday.com stopped accepting your token. Paste the current one from Monday.com (avatar → Developers → My access tokens).":
+      e&&e.code==="monday_token"?"Monday.com stopped accepting your token. Paste the current one from Monday.com (avatar (top right) → Developers → API token).":
       "Couldn't load today's numbers from Monday.com. Open My collabs or try again in a minute.";
     $("todayWhen").textContent="Not loaded";$("counts").innerHTML="";$("todayMeta").innerHTML="";
     $("next").innerHTML=`<p class="empty-day">${esc(msg)}</p>`;

@@ -15,7 +15,7 @@ All pages share one app shell (left sidebar, top bar with breadcrumb, theme togg
 - `public/app.css` holds the styles the digest, KPI and Home pages share
 - `api/` holds the serverless functions:
   - `api/auth/*` handles Google sign-in, limited to one Workspace domain (`ALLOWED_EMAIL_DOMAIN`). The session is a signed, HttpOnly cookie that lasts 30 days.
-  - `api/auth/monday-token.js` connects each person's own Monday.com personal API token. After Google sign-in the page asks for it (Monday.com avatar → Developers → My access tokens), checks it with Monday, and keeps it in an AES-256-GCM sealed, HttpOnly cookie tied to that Google account. The avatar menu shows which Monday account is connected and lets you change or disconnect it.
+  - `api/auth/monday-token.js` connects each person's own Monday.com personal API token. After Google sign-in the page asks for it (Monday.com avatar (top right) → Developers → API token), checks it with Monday, and keeps it in an AES-256-GCM sealed, HttpOnly cookie tied to that Google account. The avatar menu shows which Monday account is connected and lets you change or disconnect it.
   - `api/monday.js` reads the Production board with the signed-in person's token and only returns collabs where the token's owner is the CFS. The queries are fixed server-side and nothing writes to Monday.
   - `api/_briefing.js`, `api/cron/briefing.js` and `api/briefing/test.js` send the morning Slack briefing (see below). The briefing runs the browser's own `public/collabs.js` on the server, so its counts match the digest.
   - `api/rewrite.js` powers "Rewrite with Claude" (optional).

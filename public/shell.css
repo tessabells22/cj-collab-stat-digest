@@ -95,6 +95,8 @@ body.connecting{overflow:hidden}
 .connect .gate-card h1{text-align:center}
 .connect-steps{margin:6px 0 4px;padding-left:20px;color:var(--muted);font-size:14px;line-height:1.55}
 .connect-steps b{color:var(--text);font-weight:600}
+.connect-warn{font-size:13px!important;line-height:1.5;padding:10px 12px;border-radius:10px;border:1px solid color-mix(in srgb,var(--gold) 45%,var(--line));background:color-mix(in srgb,var(--gold) 10%,transparent)}
+.connect-warn b{color:var(--text)}
 .connect-input{margin-top:8px;width:100%;font:500 14px var(--f-body);padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--deck-2);color:var(--text)}
 .connect-input:focus{outline:2px solid var(--accent,#7C5CFC);outline-offset:1px}
 .connect .gbtn{border:0;cursor:pointer;margin-top:10px}
