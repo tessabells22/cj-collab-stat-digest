@@ -98,11 +98,12 @@
       <h1 id="connectTitle">Connect your Monday.com</h1>
       <p>Collab Digest reads the Production board with your own Monday.com token, so you see the collabs you can see in Monday.</p>
       <ol class="connect-steps">
-        <li>In Monday.com, click your avatar (bottom left), then <b>Developers</b>.</li>
-        <li>Open <b>My access tokens</b>, press <b>Show</b>, then <b>Copy</b>.</li>
+        <li>In Monday.com, click your avatar in the top right, then <b>Developers</b>.</li>
+        <li>In the left pane, click <b>API token</b>, then copy the token.</li>
         <li>Paste it here.</li>
       </ol>
       <label class="sr" for="connectToken">Monday.com API token</label>
+      <p class="connect-warn"><b>Keep your token private.</b> It can see everything you can see in Monday.com, including your invoices. Don't share it or paste it anywhere else.</p>
       <input type="password" id="connectToken" class="connect-input" placeholder="Paste your token" spellcheck="false" autocapitalize="off" required>
       <button type="submit" class="gbtn" id="connectGo">Connect</button>
       <p class="connect-small">Collab Digest only uses it to read the board, never to change anything. It's kept sealed in a cookie on this browser (signing out removes it), and on the server only if you get the morning Slack briefing.</p>

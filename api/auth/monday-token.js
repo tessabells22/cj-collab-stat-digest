@@ -16,7 +16,7 @@ export async function POST(request) {
     if (!token || token.length > 4000 || /\s/.test(token)) throw new AppError("bad_token", "Paste the whole token from Monday.com.", 400);
     let me;
     try { me = await whoAmI(token); }
-    catch (e) { if (e.code === "monday_token") throw new AppError("bad_token", "Monday.com didn't accept that token. Copy it again from Developers → My access tokens.", 400); throw e; }
+    catch (e) { if (e.code === "monday_token") throw new AppError("bad_token", "Monday.com didn't accept that token. Copy it again from your avatar (top right) → Developers → API token.", 400); throw e; }
     const t = { email: session.email.toLowerCase(), token, id: me.id, name: me.name };
     let briefing = false;
     if (getsBriefing(session.email)) {
