@@ -7,21 +7,45 @@ const MAX_ITEMS = 50;
 const MAX_BODY = 5000;
 const AT_ONCE = 4;
 
+const MAX_MENTIONS = 20;
 const CREATE_Q = "mutation($item:ID!, $body:String!){ create_update(item_id:$item, body:$body){ id } }";
+/* mentions_list makes Monday notify the people tagged; the <a> tags in the body make them show as real tags */
+const CREATE_MENTIONS_Q = "mutation($item:ID!, $body:String!, $mentions:[UpdateMention]){ create_update(item_id:$item, body:$body, mentions_list:$mentions){ id } }";
 const PIN_Q = "mutation($id:ID!, $item:ID){ pin_to_top(id:$id, item_id:$item){ id } }";
 
-/* Plain text with **bold** → the HTML Monday stores for updates. */
-export function toHtml(text) {
+/* Plain text with **bold** and @Name tags → the HTML Monday stores for updates. mentions = [{id, name}]
+   picked in the page; each "@Name" becomes the same link Monday's own editor writes for a tag. */
+export function toHtml(text, mentions = [], origin = "") {
   const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  return esc(text.trim()).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").split(/\r?\n/).join("<br>");
+  let html = esc(text.trim());
+  const byName = new Map(mentions.map((m) => ["@" + esc(m.name), m]));
+  if (byName.size) {
+    const alt = [...byName.keys()].sort((a, b) => b.length - a.length).map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+    html = html.replace(new RegExp(alt, "g"), (k) => {
+      const m = byName.get(k);
+      return `<a class="user_mention_editor router" href="${origin}/users/${m.id}" data-mention-type="User" data-mention-id="${m.id}" target="_blank" rel="noopener noreferrer">${k}</a>`;
+    });
+  }
+  return html.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").split(/\r?\n/).join("<br>");
 }
 
 /* One collab: create the update (unless it was already created on an earlier try), then pin it. */
-async function postOne(user, { id, updateId }, html, pin) {
+async function postOne(user, { id, updateId }, html, pin, mentions) {
   const out = { id, updateId: updateId || null, posted: !!updateId, pinned: false };
   try {
     if (!out.updateId) {
-      const created = (await monday(CREATE_Q, { item: id, body: html }, user.token)).create_update;
+      let created;
+      if (mentions.length) {
+        const list = mentions.map((m) => ({ id: m.id, type: "User" }));
+        try { created = (await monday(CREATE_MENTIONS_Q, { item: id, body: html, mentions: list }, user.token)).create_update; }
+        catch (e) {
+          /* an older API version without mentions_list: post with the tags in the body only */
+          if (e.code !== "tool_error" || !/mention/i.test(e.message)) throw e;
+          created = (await monday(CREATE_Q, { item: id, body: html }, user.token)).create_update;
+        }
+      } else {
+        created = (await monday(CREATE_Q, { item: id, body: html }, user.token)).create_update;
+      }
       if (!created || !created.id) throw new AppError("tool_error", "Monday.com didn't return the new update.", 502);
       out.updateId = String(created.id);
       out.posted = true;
@@ -55,14 +79,23 @@ export async function POST(request) {
       .filter((x) => /^\d{1,20}$/.test(x.id) && (!x.updateId || /^\d{1,20}$/.test(x.updateId)) && !seen.has(x.id) && seen.add(x.id));
     if (!items.length || items.length > MAX_ITEMS) throw new AppError("bad_request", `Pick between 1 and ${MAX_ITEMS} collabs.`, 400);
 
+    const seenM = new Set();
+    const mentions = (Array.isArray(b.mentions) ? b.mentions : [])
+      .map((m) => ({ id: String(m && m.id || ""), name: String(m && m.name || "").trim() }))
+      .filter((m) => /^\d{1,20}$/.test(m.id) && m.name && m.name.length <= 100 && text.includes("@" + m.name) && !seenM.has(m.id) && seenM.add(m.id))
+      .slice(0, MAX_MENTIONS);
+
     /* only active collabs where this person is the CFS: the same list the page showed */
-    const mine = new Set((await activeItems(user)).map((it) => String(it.id)));
-    const html = toHtml(text);
+    const active = await activeItems(user);
+    const mine = new Set(active.map((it) => String(it.id)));
+    let origin = "https://monday.com";
+    try { if (active[0] && active[0].url) origin = new URL(active[0].url).origin; } catch {}
+    const html = toHtml(text, mentions, origin);
     const pin = b.pin !== false;
     const results = [];
     const allowed = items.filter((x) => mine.has(x.id) || !results.push({ id: x.id, posted: false, pinned: false, error: "Not one of your active collabs." }));
     for (let i = 0; i < allowed.length; i += AT_ONCE) {
-      results.push(...(await Promise.all(allowed.slice(i, i + AT_ONCE).map((x) => postOne(user, x, html, pin)))));
+      results.push(...(await Promise.all(allowed.slice(i, i + AT_ONCE).map((x) => postOne(user, x, html, pin, mentions)))));
     }
     return json({ results, pin });
   } catch (e) {

@@ -38,6 +38,14 @@
 .preview{border:1px dashed var(--line);border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.6;min-height:46px;overflow-wrap:anywhere}
 .preview:empty::before{content:"Your update will look like this in Monday.com.";color:var(--muted)}
 .preview b{font-weight:700}
+.preview .tag{color:#3b82f6;font-weight:500}
+.tagbox{position:relative}
+.sugg{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5;background:var(--deck-2);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 28px rgba(0,0,0,.28);padding:6px;display:flex;flex-direction:column;gap:2px;max-height:260px;overflow:auto}
+.sugg button{appearance:none;text-align:left;background:transparent;border:0;border-radius:8px;padding:9px 10px;color:var(--text);font:500 14px var(--f-body);cursor:pointer}
+.sugg button[aria-selected="true"],.sugg button:hover{background:rgba(124,92,252,.16)}
+.sugg .none{padding:9px 10px;font-size:13px;color:var(--muted)}
+.tags{display:flex;flex-wrap:wrap;gap:6px;font-size:12.5px;color:var(--muted);align-items:center}
+.tags span{border:1px solid var(--line);border-radius:999px;padding:3px 9px;color:var(--text)}
 .lbl{font:600 11px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .check{display:flex;gap:10px;align-items:center;font-size:14px;cursor:pointer}
 .check input{accent-color:var(--violet);width:16px;height:16px}
@@ -89,8 +97,12 @@
 
     <div class="card composer">
       <h3>2 · Write the update</h3>
-      <div class="fmt"><button type="button" id="boldBtn" title="Bold (Ctrl+B)" aria-label="Bold">B</button></div>
-      <textarea id="text" aria-label="Update to post" placeholder="e.g. Creator will only submit **RAW Files**!" maxlength="5000"></textarea>
+      <div class="fmt"><button type="button" id="boldBtn" title="Bold (Ctrl+B)" aria-label="Bold">B</button><button type="button" id="tagBtn" title="Tag someone (type @)" aria-label="Tag someone">@</button></div>
+      <div class="tagbox">
+        <textarea id="text" aria-label="Update to post" placeholder="e.g. Hi @Kaycee Inza-Cruz, creator will only submit **RAW Files**!" maxlength="5000" aria-autocomplete="list" aria-controls="sugg"></textarea>
+        <div class="sugg" id="sugg" role="listbox" hidden></div>
+      </div>
+      <div class="tags" id="tags" hidden></div>
       <span class="lbl">Preview</span>
       <div class="preview" id="preview"></div>
       <label class="check"><input type="checkbox" id="pin" checked> Pin it to the top of each collab's updates</label>
@@ -118,8 +130,17 @@
 const $=id=>document.getElementById(id);
 let rows=[],picked=new Set(),mondayName="",posting=false,last=null;
 
+/* tags picked from the list: name → Monday user id. Typing "@Name" by hand stays plain text in Monday,
+   so only names picked here become real tags. */
+const tagged=new Map();
+let users=null,usersP=null;
+const liveTags=()=>[...tagged].filter(([n])=>$("text").value.includes("@"+n)).map(([name,id])=>({id,name}));
 /* same conversion the server does, for the preview */
-const toHtml=t=>esc(t.trim()).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").split(/\r?\n/).join("<br>");
+function toHtml(t){
+  let h=esc(t.trim());const names=liveTags().map(m=>"@"+esc(m.name)).sort((a,b)=>b.length-a.length);
+  if(names.length)h=h.replace(new RegExp(names.map(n=>n.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("|"),"g"),k=>`<span class="tag">${k}</span>`);
+  return h.replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").split(/\r?\n/).join("<br>");
+}
 
 /* ---------- picking ---------- */
 function shown(){
@@ -145,6 +166,7 @@ function sync(){
   $("goBtn").disabled=!ok||posting;
   $("goHint").textContent=!n?"Tick at least one collab.":n>50?"Pick 50 or fewer at a time.":!$("text").value.trim()?"Write the update.":"You'll confirm before anything is posted.";
   $("preview").innerHTML=toHtml($("text").value);
+  const lt=liveTags();$("tags").hidden=!lt.length;$("tags").innerHTML=lt.length?"Tagged (they'll be notified): "+lt.map(m=>`<span>${esc(m.name)}</span>`).join(""):"";
   if(!$("confirm").hidden&&!ok)$("confirm").hidden=true;
 }
 ["q","clientSel","stageSel"].forEach(id=>$(id).addEventListener("input",renderPicks));
@@ -158,26 +180,63 @@ function bold(){
 }
 $("boldBtn").onclick=bold;
 $("text").addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="b"){e.preventDefault();bold()}});
-$("text").addEventListener("input",sync);
+$("text").addEventListener("input",()=>{sync();suggest()});
+
+/* ---------- tagging: type @ and pick a person ---------- */
+function loadUsers(){
+  if(!usersP)usersP=api("/api/monday",{op:"users"}).then(r=>{users=r.users||[];return users}).catch(e=>{usersP=null;throw e});
+  return usersP;
+}
+let sIdx=0,sList=[],sStart=-1;
+function tokenAtCaret(){
+  const t=$("text"),v=t.value.slice(0,t.selectionStart),m=/(^|[\s(])@([^\s@][^@\n]{0,40})?$/.exec(v);
+  if(!m)return null;return{start:v.length-(m[2]||"").length-1,q:(m[2]||"").toLowerCase()};
+}
+async function suggest(){
+  const tok=tokenAtCaret(),box=$("sugg");
+  if(!tok){box.hidden=true;return}
+  if(!users){box.hidden=false;box.innerHTML='<div class="none">Loading people…</div>';try{await loadUsers()}catch(e){box.innerHTML='<div class="none">Couldn\'t load people from Monday.com.</div>';return}}
+  const words=tok.q.split(/\s+/).filter(Boolean);
+  sList=users.filter(u=>{const n=u.name.toLowerCase();return words.every(w=>n.includes(w))}).slice(0,8);sStart=tok.start;sIdx=0;
+  if(tok.q.length>24&&!sList.length){box.hidden=true;return}
+  box.hidden=false;
+  box.innerHTML=sList.length?sList.map((u,i)=>`<button type="button" role="option" data-i="${i}" aria-selected="${i===sIdx}">${esc(u.name)}</button>`).join(""):'<div class="none">No one matches. Keep typing or press Esc.</div>';
+  box.querySelectorAll("button").forEach(b=>b.onmousedown=e=>{e.preventDefault();pick(+b.dataset.i)});
+}
+function pick(i){
+  const u=sList[i];if(!u)return;
+  const t=$("text"),end=t.selectionStart,v=t.value,ins="@"+u.name+" ";
+  t.value=v.slice(0,sStart)+ins+v.slice(end);const pos=sStart+ins.length;t.focus();t.setSelectionRange(pos,pos);
+  tagged.set(u.name,u.id);$("sugg").hidden=true;sync();
+}
+$("text").addEventListener("keydown",e=>{
+  const box=$("sugg");if(box.hidden||!sList.length){if(e.key==="Escape")box.hidden=true;return}
+  if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();sIdx=(sIdx+(e.key==="ArrowDown"?1:sList.length-1))%sList.length;box.querySelectorAll("button").forEach((b,i)=>b.setAttribute("aria-selected",i===sIdx))}
+  else if(e.key==="Enter"||e.key==="Tab"){e.preventDefault();pick(sIdx)}
+  else if(e.key==="Escape"){e.preventDefault();box.hidden=true}
+});
+$("text").addEventListener("blur",()=>setTimeout(()=>$("sugg").hidden=true,150));
+$("text").addEventListener("click",suggest);
+$("tagBtn").onclick=()=>{const t=$("text"),a=t.selectionStart,v=t.value,pre=a>0&&!/\s/.test(v[a-1])?" @":"@";t.value=v.slice(0,a)+pre+v.slice(t.selectionEnd);t.focus();t.setSelectionRange(a+pre.length,a+pre.length);sync();suggest()};
 
 /* ---------- posting ---------- */
 const byId=id=>rows.find(r=>r.id===id)||{id,name:"Collab "+id};
 $("goBtn").onclick=()=>{
   const list=[...picked].map(byId),pin=$("pin").checked;
-  $("confirmText").textContent=`Post this update${pin?" and pin it":""} on ${list.length} collab${list.length===1?"":"s"}${mondayName?` as ${mondayName}`:""}? Monday.com notifies people who follow these collabs, so it can't be quietly undone.`;
+  $("confirmText").textContent=`Post this update${pin?" and pin it":""} on ${list.length} collab${list.length===1?"":"s"}${mondayName?` as ${mondayName}`:""}? Monday.com notifies people who follow these collabs, so it can't be quietly undone.`+(liveTags().length?` ${liveTags().map(m=>m.name).join(", ")} will be tagged and notified on each one (${list.length} notification${list.length===1?"":"s"} each).`:"");
   $("confirmList").innerHTML=list.map(r=>`<li>${esc(r.name)}</li>`).join("");
   $("confirm").hidden=false;$("results").hidden=true;$("yesBtn").focus();
 };
 $("backBtn").onclick=()=>{$("confirm").hidden=true};
-$("yesBtn").onclick=()=>send([...picked].map(id=>({id})),$("text").value,$("pin").checked);
+$("yesBtn").onclick=()=>send([...picked].map(id=>({id})),$("text").value,$("pin").checked,liveTags());
 
-async function send(items,text,pin){
+async function send(items,text,pin,mentions){
   posting=true;$("yesBtn").disabled=true;$("yesBtn").textContent="Posting…";sync();
   try{
-    const {results}=await api("/api/post",{items,text,pin});
+    const {results}=await api("/api/post",{items,text,pin,mentions});
     /* keep earlier successes when this was a retry */
     const prev=last&&last.text===text?last.results.filter(r=>!results.some(x=>x.id===r.id)):[];
-    last={text,pin,results:[...prev,...results]};
+    last={text,pin,mentions,results:[...prev,...results]};
     showResults();
     if(last.results.every(r=>r.posted&&(r.pinned||!pin))){picked.clear();renderPicks()}
   }catch(e){
@@ -187,7 +246,7 @@ async function send(items,text,pin){
   }
 }
 function showResults(){
-  const {results,pin,text}=last;
+  const {results,pin,text,mentions}=last;
   const done=results.filter(r=>r.posted&&(r.pinned||!pin)),failed=results.filter(r=>!(r.posted&&(r.pinned||!pin)));
   const line=r=>{const it=byId(r.id),name=it.url?`<a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.name)}</a>`:esc(it.name);
     if(r.posted&&(r.pinned||!pin))return`<li class="ok">✓ ${name}</li>`;
@@ -197,7 +256,7 @@ function showResults(){
     <ul>${[...failed,...done].map(line).join("")}</ul>
     ${failed.length?'<div class="acts"><button type="button" class="abtn primary" id="retryBtn">Retry the rest</button></div>':""}`;
   $("results").hidden=false;
-  const rb=$("retryBtn");if(rb)rb.onclick=()=>send(failed.map(r=>({id:r.id,updateId:r.updateId||undefined})),text,pin);
+  const rb=$("retryBtn");if(rb)rb.onclick=()=>send(failed.map(r=>({id:r.id,updateId:r.updateId||undefined})),text,pin,mentions);
 }
 
 /* ---------- load ---------- */

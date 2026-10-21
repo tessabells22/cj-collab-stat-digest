@@ -1,7 +1,7 @@
 // Read-only Monday.com queries (the one write lives in api/post.js) for the pages, made with the signed-in person's own Monday token.
 // The queries live server-side (api/_collabs.js), and every result is limited to collabs where that person is the CFS.
 import { json, requireMonday, requireSession, errorResponse, AppError } from "./_lib.js";
-import { activeItems, kpiItems, updatesFor, updatesMap } from "./_collabs.js";
+import { activeItems, kpiItems, updatesFor, updatesMap, accountUsers } from "./_collabs.js";
 
 export async function POST(request) {
   try {
@@ -24,6 +24,7 @@ export async function POST(request) {
     }
 
     if (body.op === "list") return json({ me, items: await activeItems(user, { fresh }) });
+    if (body.op === "users") return json({ users: await accountUsers(user) });
     if (body.op === "kpi") return json({ me, items: await kpiItems(user, { fresh }) });
 
     if (body.op === "updates") {
