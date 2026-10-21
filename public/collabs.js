@@ -15,11 +15,14 @@ const GROUPS=[
   {key:"changed",label:"Changed 24h",c:"var(--crystal)"},
   {key:"waiting",label:"Waiting on client",c:"#9cd326"},
   {key:"stuck",label:"Stuck 5d+",c:"var(--gold)"},
+  {key:"onHold",label:"On hold",c:"#8a8a99"},
   {key:"other",label:"Everything else",c:"var(--muted)"}
 ];
 const STAGE_HEX={"Canceled":"#df2f4a","Planning":"#66ccff","Creative Direction":"#ffcb00","Creator Assignment":"#fdab3d","Production":"#9d50dd",
   "QC - Production":"#784bd1","Post-Production":"#579bfc","QC - Post-Production":"#5a86d6","Client Review":"#9cd326","Revision":"#ff007f","Revisions":"#ff007f",
   "Upload":"#ff5ac4","On Hold":"#8a8a99","Approved":"#00c875","Completed":"#16a36b","Posting":"#4a8ff0","In Progress":"#fdab3d","Done":"#00c875","Stuck":"#df2f4a"};
+/* "On Hold" as the stage or any sub-stage: paused, so it isn't late, due or stuck */
+const isOnHold=(stage,sub)=>/\bon[\s-]*hold\b/i.test(`${stage||""} ${sub||""}`);
 const YOUR_MOVE=/^(pending asset|needs clarification|revisions?|creator reassignment|contracting|product access)$/i;
 const tz="Asia/Manila";
 
@@ -98,7 +101,10 @@ function buildRow(it,updates,me){
   /* In Post-Production a Pending Asset comes from the PP Manager, not the CFS */
   const ppAsset=stageName==="Post-Production"&&/^pending asset$/i.test(sub);
   const move=ppAsset?null:[sub,stageName].find(v=>YOUR_MOVE.test(v||""));
-  if(mentionsMe){row.group="needsYou";row.reason=`${by||"Someone"} mentioned you${p.isReply?" in a comment":""}`}
+  row.onHold=isOnHold(stageName,sub);
+  /* on hold comes first: a paused collab never shows as late, due today or stuck (a mention still flags the row) */
+  if(row.onHold){row.group="onHold";row.reason=`On hold${days!=null?` for ${days} day${days===1?"":"s"}`:""}${mentionsMe?` · ${by||"Someone"} mentioned you`:""}`}
+  else if(mentionsMe){row.group="needsYou";row.reason=`${by||"Someone"} mentioned you${p.isReply?" in a comment":""}`}
   else if(move){row.group="needsYou";row.reason=`Your move: ${move}${days!=null?`, ${days}d in stage`:""}`}
   else if(dueToday&&!isCR){row.group="dueToday";row.reason="Due today: still time to save it"}
   else if(row.overdue&&!isCR){row.group="late";row.reason=row.daysLate?`${row.daysLate} day${row.daysLate===1?"":"s"} late`:"Less than a day late"}
@@ -186,6 +192,7 @@ const shortDue=s=>{const d=dueDate(s);return d?d.toLocaleDateString("en-US",{tim
    Pending Asset is the PP Manager's, not the creator's) */
 const CREATOR_STAGES=/^(creator assignment|production|revisions?)$/i;
 function creatorOwes(r){
+  if(r.onHold||isOnHold(r.stage,r.subStage))return false;
   const ppAsset=r.stage==="Post-Production"&&/^pending asset$/i.test(r.subStage);
   return CREATOR_STAGES.test(r.stage)||(!ppAsset&&YOUR_MOVE.test(r.subStage||""));
 }

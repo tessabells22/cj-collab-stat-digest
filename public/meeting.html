@@ -155,6 +155,7 @@ const current=()=>crew==="none"?null:CREWS.find(c=>c.key===crew);
 /* ---------- agenda ---------- */
 const dueDay=r=>dayNum(r.deadline);
 function sections(list,M){
+  const held=list.filter(r=>r.group==="onHold");list=list.filter(r=>r.group!=="onHold");
   const late=list.filter(r=>r.overdue&&r.stage!=="Client Review");
   const dueSoon=list.filter(r=>{const d=dueDay(r);return d!=null&&d>=M.today&&d<=M.next&&r.stage!=="Client Review"});
   const blockers=list.filter(r=>!late.includes(r)&&!dueSoon.includes(r)&&(r.group==="needsYou"||r.group==="stuck"));
@@ -167,6 +168,7 @@ function sections(list,M){
     {key:"block",title:"Blockers and asks",c:"var(--violet)",hint:"Your move (pending asset, clarification, revisions) or stuck 5+ days in the same stage.",items:blockers.sort((a,b)=>(b.daysInStage??0)-(a.daysInStage??0))},
     {key:"moved",title:`Moved since ${dayName(M.last)}`,c:"var(--crystal)",hint:"Changed stage since the last meeting.",items:moved.sort(byDue)},
     {key:"waiting",title:"Waiting on the client",c:"#9cd326",hint:"In Client Review. Anything to chase?",items:waiting.sort((a,b)=>(b.daysInStage??0)-(a.daysInStage??0))},
+    {key:"hold",title:"On hold",c:"#8a8a99",hint:"Paused. Not counted as late or due. Anything to unblock?",items:held.sort((a,b)=>(b.daysInStage??0)-(a.daysInStage??0))},
   ];
 }
 function itemHTML(r){
