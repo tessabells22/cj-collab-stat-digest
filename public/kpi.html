@@ -10,8 +10,9 @@
 <link rel="stylesheet" href="/app.css">
 <link rel="stylesheet" href="/shell.css">
 <style>
-/* Weekly KPIs. Five sections, each with its own heading so the page reads top to bottom:
-   At a glance (week tiles + right-now tiles), Delivery (trend charts), Coming up (deadline
+/* Weekly KPIs. Six sections, each with its own heading so the page reads top to bottom:
+   At a glance (week tiles + right-now tiles), Delivery (trend charts), Month by month (this month
+   against earlier months, same point in the month), Coming up (deadline
    load), Workload (stage and client mix), Watchlist (tables to act on). */
 :root{--s-on:var(--violet);--s-late:#D6782C;--s-none:var(--muted)}
 :root[data-mode="light"]{--s-late:#C9680A}
@@ -81,6 +82,8 @@ td .sub{display:block;font-size:12px;color:var(--muted);margin-top:2px}
 .hb .fill:only-child{border-radius:999px}
 .hb .val{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12.5px;white-space:nowrap;text-align:right;min-width:92px}
 .hb .val b{color:var(--text);font-weight:600}
+.tile .vs{font-size:12px;color:var(--muted)}
+td.up,td.down{font-weight:600}
 .empty-note{margin:0;color:var(--muted);font-size:14px;padding:6px 0}
 .weekpick{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;max-width:100%}
 .weekpick select{font:13.5px var(--f-body);color:var(--text);background:var(--deck);border:1px solid var(--line);border-radius:10px;padding:13px 12px;max-width:100%;min-width:0}
@@ -138,6 +141,28 @@ footer{line-height:1.6}
         <div class="chart" id="chOnTime"></div></div>
       <div class="card"><div class="card-head"><div><h3>Cycle time</h3><p class="hint">Median days from the collab being created to it being delivered.</p></div></div>
         <div class="chart" id="chCycle"></div></div>
+    </div>
+  </section>
+
+  <!-- 2b -->
+  <section class="sec" aria-labelledby="h-months">
+    <div class="sec-head"><div><span class="eyebrow">Month by month</span><h2 id="h-months">Are you improving?</h2>
+      <p id="monthsNote">This month so far against the same days of last month, then each full month side by side.</p></div></div>
+    <div class="tiles big" id="tilesMonth"></div>
+    <div class="card">
+      <div class="card-head"><div><h3>Delivered per month</h3><p class="hint">Collabs that reached Approved or Completed, split by whether they beat their deadline. This month is so far.</p></div>
+        <div class="legend"><span><i style="background:var(--s-on)"></i>On time</span><span><i style="background:var(--s-late)"></i>Late</span><span><i style="background:var(--s-none);opacity:.55"></i>No deadline</span></div></div>
+      <div class="chart" id="chMonThru"></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="card-head"><div><h3>On-time rate by month</h3><p class="hint">Share of each month's deliveries finished on or before their deadline.</p></div></div>
+        <div class="chart" id="chMonRate"></div></div>
+      <div class="card"><div class="card-head"><div><h3>Cycle time by month</h3><p class="hint">Median days from created to delivered. Lower is better.</p></div></div>
+        <div class="chart" id="chMonCycle"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div><h3>Month by month</h3><p class="hint">Change is against the month before. Green is better, whichever way the number moves.</p></div></div>
+      <div id="tbMonths"></div>
     </div>
   </section>
 
@@ -238,6 +263,32 @@ function compute(){
   return{today,perWeek,active,late,stuck,cr,revision,upcoming};
 }
 
+/* ---------- months: calendar months in Manila time ----------
+   The page loads finished collabs from the last 180 days, so only months that start inside that
+   window are shown (up to 6). This month is compared with the same days of last month. */
+const HISTORY_DAYS=180;
+const ymd=n=>new Date(n*DAY).toISOString().slice(0,10);
+const monthStart=n=>dayNum(ymd(n).slice(0,8)+"01");
+const nextMonth=m=>{const d=new Date(m*DAY);return Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,1)/DAY};
+const prevMonth=m=>{const d=new Date(m*DAY);return Date.UTC(d.getUTCFullYear(),d.getUTCMonth()-1,1)/DAY};
+const monthName=(m,long)=>new Date(m*DAY).toLocaleDateString("en-US",{timeZone:"UTC",month:long?"long":"short"});
+function stats(done,from,to){
+  const d=done.filter(r=>r.stageStart>=from&&r.stageStart<to);
+  const withDl=d.filter(r=>r.deadline!=null),onTime=withDl.filter(r=>r.stageStart<=r.deadline),late=withDl.filter(r=>r.stageStart>r.deadline);
+  const cycles=d.filter(r=>r.created!=null&&r.stageStart>=r.created).map(r=>r.stageStart-r.created);
+  return{delivered:d.length,withDl:withDl.length,onTime:onTime.length,late:late.length,noDl:d.length-withDl.length,
+    rate:withDl.length?onTime.length/withDl.length:null,cycle:median(cycles),cycleN:cycles.length,lateDays:avg(late.map(r=>r.stageStart-r.deadline))};
+}
+function computeMonths(){
+  const today=todayNum(),done=rows.filter(r=>FINISHED.has(r.stage)&&r.stageStart!=null);
+  const cur=monthStart(today),since=today-HISTORY_DAYS,months=[];
+  for(let m=cur;m>=since&&months.length<6;m=prevMonth(m))months.unshift(m);
+  const list=months.map(m=>({m,partial:m===cur,...stats(done,m,m===cur?today+1:nextMonth(m))}));
+  /* this month so far vs the same number of days last month */
+  const dom=today-cur+1,pm=prevMonth(cur),pmEnd=Math.min(pm+dom,cur);
+  return{list,mtd:stats(done,cur,today+1),pmtd:stats(done,pm,pmEnd),cur,pm,pmEnd,dom};
+}
+
 /* ---------- small helpers ---------- */
 function delta(cur,prev,{pct=false,goodUp=true,unit=""}={}){
   if(cur==null||prev==null)return'<span class="d">No comparison with the week before</span>';
@@ -335,6 +386,54 @@ function delivery(k){
     {h:"No deadline",n:1,f:p=>p.noDl},{h:"Rate",n:1,f:p=>pctText(p.rate)},{h:"Cycle (median)",n:1,f:p=>daysText(p.cycle)}]);
 }
 
+/* ---------- section 2b: month by month ---------- */
+function vsText(cur,prev,{pct=false,goodUp=true,unit=""},than){
+  if(cur==null||prev==null)return`<span class="d">Nothing to compare with ${than}</span>`;
+  const diff=pct?Math.round((cur-prev)*100):round1(cur-prev);
+  if(!diff)return`<span class="d">Same as ${than}</span>`;
+  const good=(diff>0)===goodUp;
+  return`<span class="d"><b class="${good?"up":"down"}">${diff>0?"▲":"▼"} ${Math.abs(diff)}${pct?" pts":unit}</b> vs ${than}</span>`;
+}
+function months(){
+  const M=computeMonths(),{mtd,pmtd}=M;
+  const than=`${monthName(M.pm)} 1–${M.pmEnd-M.pm}`;
+  $("monthsNote").textContent=`${monthName(M.cur,true)} so far (${M.dom} day${M.dom===1?"":"s"}) against the same days of ${monthName(M.pm,true)}, then each month side by side. Months before ${monthName(M.list[0].m,true)} fall outside the 180 days this page loads.`;
+  $("tilesMonth").innerHTML=[
+    {k:`Delivered · ${monthName(M.cur)} so far`,v:mtd.delivered,d:vsText(mtd.delivered,pmtd.delivered,{},than)+`<span class="d vs">${than}: ${pmtd.delivered}</span>`},
+    {k:"On-time rate",v:pctText(mtd.rate),d:vsText(mtd.rate,pmtd.rate,{pct:true},than)+`<span class="d vs">${than}: ${pctText(pmtd.rate)}${pmtd.withDl?` (${pmtd.onTime} of ${pmtd.withDl})`:""}</span>`},
+    {k:"Cycle time",v:mtd.cycle==null?"–":`${round1(mtd.cycle)}<small>days</small>`,d:vsText(mtd.cycle,pmtd.cycle,{goodUp:false,unit:"d"},than)+`<span class="d vs">${than}: ${daysText(pmtd.cycle)}</span>`},
+    {k:"Avg days late",v:mtd.lateDays==null?"–":`${round1(mtd.lateDays)}<small>days</small>`,d:vsText(mtd.lateDays,pmtd.lateDays,{goodUp:false,unit:"d"},than)+`<span class="d vs">Late deliveries only · ${than}: ${daysText(pmtd.lateDays)}</span>`},
+  ].map(t=>`<div class="tile"><span class="k">${t.k}</span><span class="v">${t.v}</span>${t.d}</div>`).join("");
+  const lbl=p=>monthName(p.m)+(p.partial?"*":"");
+  const name=p=>`<b>${esc(monthName(p.m,true))}${p.partial?" (so far)":""}</b>`;
+  const opts={clickable:false,capAll:true};
+  columnChart($("chMonThru"),M.list.map(p=>({label:lbl(p),total:p.delivered,on:true,
+    segs:[{v:p.onTime,cls:"on"},{v:p.late,cls:"late"},{v:p.noDl,cls:"none"}],
+    tip:`${name(p)}${p.delivered} delivered<br>${key("on","On time",p.onTime)}${key("late","Late",p.late)}${key("none","No deadline",p.noDl)}`})),{H:250,...opts});
+  columnChart($("chMonRate"),M.list.map(p=>({label:lbl(p),total:p.rate==null?null:p.rate*100,on:true,capText:pctText(p.rate),
+    segs:[{v:p.rate==null?0:p.rate*100,cls:"on"}],tip:`${name(p)}${p.withDl?`${pctText(p.rate)} on time (${p.onTime} of ${p.withDl})`:"No deliveries with a deadline"}`})),{max:100,fmt:v=>Math.round(v)+"%",...opts});
+  const cmax=Math.max(4,...M.list.map(p=>p.cycle||0));
+  columnChart($("chMonCycle"),M.list.map(p=>({label:lbl(p),total:p.cycle,on:true,capText:daysText(p.cycle),
+    segs:[{v:p.cycle||0,cls:"on"}],tip:`${name(p)}${p.cycleN?`Median ${daysText(p.cycle)} across ${plural(p.cycleN,"collab")}`:"No deliveries"}`})),{max:Math.ceil(cmax/4)*4,fmt:v=>Math.round(v)+"d",...opts});
+  /* change vs the month before, coloured by whether it's better */
+  const chg=(cur,prev,{pct=false,goodUp=true,unit=""}={})=>{
+    if(cur==null||prev==null)return{t:"–",c:""};
+    const diff=pct?Math.round((cur-prev)*100):round1(cur-prev);
+    if(!diff)return{t:"same",c:""};
+    return{t:`${diff>0?"+":"−"}${Math.abs(diff)}${pct?" pts":unit}`,c:(diff>0)===goodUp?"up":"down"};
+  };
+  const rowsT=M.list.map((p,i)=>{const q=M.list[i-1];return{...p,dD:q&&!p.partial?chg(p.delivered,q.delivered):{t:p.partial?"so far":"–",c:""},
+    dR:q?chg(p.rate,q.rate,{pct:true}):{t:"–",c:""},dC:q?chg(p.cycle,q.cycle,{goodUp:false,unit:"d"}):{t:"–",c:""}}}).reverse();
+  const cell=x=>`<span class="${x.c}">${x.t}</span>`;
+  $("tbMonths").innerHTML=table(rowsT,[
+    {h:"Month",f:p=>`${esc(monthName(p.m,true))}${p.partial?'<span class="sub">so far</span>':""}`},
+    {h:"Delivered",n:1,f:p=>`${p.delivered}<span class="sub">${cell(p.dD)}</span>`},
+    {h:"On time",n:1,o:1,f:p=>`${p.onTime} / ${p.withDl}`},
+    {h:"Rate",n:1,f:p=>`${pctText(p.rate)}<span class="sub">${cell(p.dR)}</span>`},
+    {h:"Cycle",n:1,f:p=>`${daysText(p.cycle)}<span class="sub">${cell(p.dC)}</span>`},
+    {h:"Avg late",n:1,o:1,f:p=>daysText(p.lateDays)}]);
+}
+
 function comingUp(k){
   const late=k.late.length;
   $("comingNote").textContent=`Open collabs only, by deadline day.${late?` Plus ${plural(late,"collab")} already past deadline (see Watchlist).`:""}`;
@@ -388,7 +487,7 @@ function watchlist(k){
 function render(){
   const k=compute();
   $("weekSel").innerHTML=weeks.slice().reverse().map(w=>`<option value="${w}"${w===sel?" selected":""}>${w===weeks[7]?"This week · ":w===weeks[6]?"Last week · ":""}${esc(weekLabel(w))}</option>`).join("");
-  tiles(k);delivery(k);comingUp(k);workload(k);watchlist(k);
+  tiles(k);delivery(k);months();comingUp(k);workload(k);watchlist(k);
 }
 $("weekSel").onchange=e=>{sel=+e.target.value;render()};
 /* charts are drawn at their card's width, so redraw when that changes */
