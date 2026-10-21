@@ -47,9 +47,9 @@ async function pageAll(rules, token) {
 /* Short per-instance cache so moving between pages doesn't re-read Monday each time. Refresh bypasses it. */
 const memo = new Map();
 const MEMO_MS = 45_000;
-async function cached(key, fresh, load) {
+async function cached(key, fresh, load, ttl = MEMO_MS) {
   const hit = memo.get(key);
-  if (!fresh && hit && Date.now() - hit.at < MEMO_MS) return hit.value;
+  if (!fresh && hit && Date.now() - hit.at < ttl) return hit.value;
   const value = await load();
   memo.set(key, { at: Date.now(), value });
   if (memo.size > 200) memo.delete(memo.keys().next().value);
@@ -77,6 +77,17 @@ export function kpiItems(user, { fresh = false } = {}) {
     const seen = new Set(active.map((it) => String(it.id)));
     return [...active, ...done.filter((it) => !seen.has(String(it.id)))];
   });
+}
+
+/* People in the Monday account (not guests), for tagging in Post update. Kept an hour per person. */
+const USERS_Q = "query{ users(kind:non_guests, limit:1000){ id name enabled } }";
+export function accountUsers(user) {
+  checkId(user.id);
+  return cached(`users:${user.id}`, false, async () => {
+    const list = (await monday(USERS_Q, {}, user.token)).users || [];
+    return list.filter((u) => u && u.enabled !== false && /^\d+$/.test(String(u.id)) && u.name)
+      .map((u) => ({ id: String(u.id), name: String(u.name).trim() })).sort((a, b) => a.name.localeCompare(b.name));
+  }, 36e5);
 }
 
 /* Latest updates for up to 100 items, keeping only items where the user is the CFS. */
