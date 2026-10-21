@@ -174,7 +174,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
   <header>
     <span class="eyebrow">Guide</span>
     <h1>Get the most out of <em>Collab Digest</em></h1>
-    <p class="lede">Collab Digest shows every Production board collab where you're the CFS, sorted by what needs you first. No more scrolling the board or opening items one by one. It reads Monday.com live with your own Monday.com token after you sign in with your company Google account, and refreshes every 5 minutes. It never changes anything in Monday.</p>
+    <p class="lede">Collab Digest shows every Production board collab where you're the CFS, sorted by what needs you first. No more scrolling the board or opening items one by one. It reads Monday.com live with your own Monday.com token after you sign in with your company Google account, and refreshes every 5 minutes. The only thing it changes in Monday is an update you post yourself from Post update.</p>
     <div class="cta-row">
       <a class="btn primary" href="/digest">Open my collabs →</a>
       <span class="progress"><span id="progText">Setup 0 of 4</span><span class="bar"><i id="progBar"></i></span></span>
@@ -365,6 +365,7 @@ const FAQ=[
   {q:"\"Sign in to Collab Digest\" keeps showing",a:"Click <b>Continue with Google</b> and pick your @contentjet.io account. If you picked a personal Gmail, you'll see a message saying so; try again with your work account.",k:"sign in signed out login google gmail setup"},
   {q:"Where do I find my Monday.com token?",a:"In Monday.com click your avatar in the top right → <b>Developers</b> → <b>API token</b> in the left pane, then copy the token. Keep it private and don't share it with anyone: it can see everything you can see in Monday.com, including your invoices. Collab Digest only uses it to read the board.",k:"token api key connect developers access where find"},
   {q:"\"Monday.com stopped accepting your token\"",a:"Your token was regenerated in Monday.com, so the old one no longer works. Copy the current one and paste it into the Connect screen.",k:"connection token stopped broken monday rejected regenerated"},
+  {q:"How do I post the same update on several collabs?",a:"Open <b>Post update</b> in the sidebar (or <b>Post to several</b> on My collabs). Search or filter, e.g. by client, tick the collabs, write the update once (use <b>B</b> or <span class=\"kbd\">Ctrl+B</span> for bold) and press <b>Post</b>. You confirm before anything goes out. It's posted under your Monday name and pinned to the top unless you untick <b>Pin it</b>. If a few fail, <b>Retry the rest</b> only redoes those, so nothing is posted twice.",k:"post update bulk several many pin pinned same note raw files"},
   {q:"I connected the wrong Monday account",a:"Open your avatar menu (top right) → <b>Change Monday.com token</b>, paste your own token, or press <b>Disconnect</b>. The menu shows which Monday account is connected.",k:"wrong account change token disconnect"},
   {q:"\"Monday.com didn't answer in time\"",a:"Nothing to do. The last good data stays on screen and the next refresh tries again.",k:"timeout slow didn't answer error rate limit"},
   {q:"The list is empty",a:"Check that you're listed in the CFS column on the Production board in Monday. The page only shows collabs where you are the CFS.",k:"empty nothing no collabs"},

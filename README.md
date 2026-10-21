@@ -9,6 +9,7 @@ All pages share one app shell (left sidebar, top bar with breadcrumb, theme togg
 - `public/kpi.html` is the weekly KPI dashboard (`/kpi`) for the signed-in person's collabs, in five sections: At a glance (delivered, on-time rate, cycle time, due this week; plus active, late, stuck, waiting on client, in revision right now), Delivery (8-week charts for deliveries split on time / late, on-time rate and cycle time), Coming up (deadline load for the next 14 days and what's due in 7), Workload (pipeline by stage, active by client) and Watchlist (late now, client review waits, oldest in stage, delivered by client)
 - `public/creators.html` is Creators (`/creators`): everyone on your collabs with active / late / due-soon counts, their on-time record with you and last update; opening one lists their collabs and past deliveries, with a Message button
 - `public/messages.html` is Messages (`/messages`): Brkaway templates (late nudge, asset chase, revision request, deadline reminder, check-in, welcome, videos received) that fill in a creator's collabs and deadlines, plus a Chase list with one late nudge per creator
+- `public/post.html` is Post update (`/post`): tick several collabs, write one update (with **bold**), and it's posted on each one under your Monday name and pinned to the top. You confirm first; failures can be retried without double-posting. This is the app's only write to Monday.
 - `public/guide.html` is the guide (`/guide`)
 - `public/shell.js` and `public/shell.css` draw the sidebar, top bar and sign-in screen; add a page to the `NAV` list in `shell.js` to put it in the sidebar
 - `public/collabs.js` holds the Monday column ids, the grouping rules and the loader, shared by the digest and the Home snapshot so their counts always match
@@ -16,8 +17,9 @@ All pages share one app shell (left sidebar, top bar with breadcrumb, theme togg
 - `api/` holds the serverless functions:
   - `api/auth/*` handles Google sign-in, limited to one Workspace domain (`ALLOWED_EMAIL_DOMAIN`). The session is a signed, HttpOnly cookie that lasts 30 days.
   - `api/auth/monday-token.js` connects each person's own Monday.com personal API token. After Google sign-in the page asks for it (Monday.com avatar (top right) → Developers → API token), checks it with Monday, and keeps it in an AES-256-GCM sealed, HttpOnly cookie tied to that Google account. The avatar menu shows which Monday account is connected and lets you change or disconnect it.
-  - `api/monday.js` reads the Production board with the signed-in person's token and only returns collabs where the token's owner is the CFS. The queries are fixed server-side and nothing writes to Monday.
+  - `api/monday.js` reads the Production board with the signed-in person's token and only returns collabs where the token's owner is the CFS. The queries are fixed server-side.
   - `api/_briefing.js`, `api/cron/briefing.js` and `api/briefing/test.js` send the morning Slack briefing (see below). The briefing runs the browser's own `public/collabs.js` on the server, so its counts match the digest.
+  - `api/post.js` backs Post update: `create_update` then `pin_to_top` for each collab, four at a time, up to 50 per request, with the person's own token. It refuses any item that isn't one of their active collabs where they're the CFS. Pinning needs Monday API version 2024-10 or later (the default), so leave `MONDAY_API_VERSION` empty or set it to a recent version.
   - `api/rewrite.js` powers "Rewrite with Claude" (optional).
 
 ## Deploy
@@ -35,7 +37,7 @@ All pages share one app shell (left sidebar, top bar with breadcrumb, theme togg
 
 Nothing to set up on the server. Each CFS pastes their own personal API token the first time they sign in, once per browser. The Production board only shows members the items assigned to them, so a shared member token can't see everyone's collabs, and each person's own token sees exactly what they see in Monday.
 
-A personal token can do anything its owner can do in Monday. The app only sends the fixed read queries in `api/_collabs.js`, the token never reaches page JavaScript, and it's encrypted with a key derived from `SESSION_SECRET`. Changing `SESSION_SECRET` makes everyone sign in and reconnect. If someone regenerates their token in Monday, the page asks for the new one.
+A personal token can do anything its owner can do in Monday. The app only sends the fixed read queries in `api/_collabs.js` and, from Post update, the two update mutations in `api/post.js`; the token never reaches page JavaScript, and it's encrypted with a key derived from `SESSION_SECRET`. Changing `SESSION_SECRET` makes everyone sign in and reconnect. If someone regenerates their token in Monday, the page asks for the new one.
 
 ### 3. Vercel
 

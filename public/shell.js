@@ -14,6 +14,7 @@
     kpi: svg('<path d="M3 3v18h18"/><path d="M7 15v2M11 11v6M15 7v10M19 12v5"/>'),
     creators: svg('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 20a6.5 6.5 0 0 0-3-5.5"/>'),
     messages: svg('<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.7A8 8 0 1 1 21 12z"/><path d="M8.5 10.5h7M8.5 13.5h4.5"/>'),
+    post: svg('<path d="M12 17v5"/><path d="M9 3h6l-1 6 4 4v2H6v-2l4-4z"/>'),
     guide: svg('<path d="M4 19.5V5a2 2 0 0 1 2-2h14v18H6.5A2.5 2.5 0 0 1 4 18.5z"/><path d="M8 7h8M8 11h6"/>'),
     moon: svg('<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>'),
     sun: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
@@ -27,6 +28,7 @@
     { id: "kpi", href: "/kpi", label: "Weekly KPIs" },
     { id: "creators", href: "/creators", label: "Creators" },
     { id: "messages", href: "/messages", label: "Messages" },
+    { id: "post", href: "/post", label: "Post update" },
     { id: "guide", href: "/guide", label: "Guide" },
   ];
   const body = document.body, page = body.dataset.page, app = document.getElementById("app");
@@ -47,7 +49,7 @@
       <button type="button" class="side-btn collapse" id="collapseBtn" aria-label="Collapse sidebar">${ICON.chev}</button>
     </div>
     <nav class="nav" aria-label="Main">${NAV.map(n => `<a href="${n.href}"${n.id === page ? ' aria-current="page"' : ""} title="${esc(n.label)}">${ICON[n.id]}<span>${esc(n.label)}</span></a>`).join("")}</nav>
-    <p class="side-foot">Read-only. Reads the Monday.com Production board and never changes it.</p>`;
+    <p class="side-foot">Reads the Monday.com Production board. The only change it makes is an update you post from Post update.</p>`;
   if (!app.querySelector(".scrim")) app.insertAdjacentHTML("beforeend", '<div class="scrim" id="scrim"></div>');
   if (store.get("cd.side") === "collapsed") app.classList.add("collapsed");
   document.getElementById("collapseBtn").onclick = () => {
@@ -106,7 +108,7 @@
       <p class="connect-warn"><b>Keep your token private.</b> It can see everything you can see in Monday.com, including your invoices. Don't share it or paste it anywhere else.</p>
       <input type="password" id="connectToken" class="connect-input" placeholder="Paste your token" spellcheck="false" autocapitalize="off" required>
       <button type="submit" class="gbtn" id="connectGo">Connect</button>
-      <p class="connect-small">Collab Digest only uses it to read the board, never to change anything. It's kept sealed in a cookie on this browser (signing out removes it), and on the server only if you get the morning Slack briefing.</p>
+      <p class="connect-small">Collab Digest uses it to read the board, and to post an update only when you do it from Post update. It's kept sealed in a cookie on this browser (signing out removes it), and on the server only if you get the morning Slack briefing.</p>
       <div class="connect-links"><a href="/guide#token">Help</a><button type="button" id="connectCancel" hidden>Cancel</button><button type="button" id="connectOff" hidden>Disconnect</button><button type="button" id="connectOut">Sign out</button></div>
     </form>
     <div class="note err" id="connectErr" hidden></div>
