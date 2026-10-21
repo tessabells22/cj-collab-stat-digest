@@ -60,7 +60,7 @@ export function briefingBlocks(b) {
     blocks.push({ type: "section", text: { type: "mrkdwn", text: "Nothing needs you, nothing due today and nothing late." } });
   }
   if (url) blocks.push({ type: "actions", elements: [{ type: "button", style: "primary", text: { type: "plain_text", text: "Open my collabs" }, url: `${url}/digest` }] });
-  blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: "Collab Digest · read-only, nothing is changed in Monday.com" }] });
+  blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: "Collab Digest · nothing is changed in Monday.com" }] });
   return { text: `Good morning, ${first}: ${n("needsYou")} needs you, ${n("dueToday")} due today, ${n("late")} late.`, blocks };
 }
 

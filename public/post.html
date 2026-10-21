@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Post update</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/app.css">
+<link rel="stylesheet" href="/shell.css">
+<style>
+/* Post update: tick collabs, write one update, post it on all of them (and pin it) with your own Monday token. */
+.wrap{max-width:1120px;gap:24px}
+.card{background:var(--deck);border:1px solid var(--line);border-radius:18px;padding:22px 24px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.card h3{margin:0;font:600 16px/1.3 var(--f-display)}
+.hint{margin:0;font-size:13px;color:var(--muted)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+.filters{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.filters input,.filters select{font:14px var(--f-body);color:var(--text);background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-width:0}
+.filters input{grid-column:1/-1}
+.selbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.selbar .count{font:500 12px var(--f-mono);color:var(--muted)}
+.linkbtn{appearance:none;background:none;border:0;padding:0;color:var(--violet);font:600 13px var(--f-body);cursor:pointer}
+.linkbtn:hover{text-decoration:underline;text-underline-offset:3px}
+.links{display:flex;gap:14px}
+.picks{display:flex;flex-direction:column;gap:6px;max-height:520px;overflow:auto}
+.pick{display:grid;grid-template-columns:18px minmax(0,1fr);gap:10px;align-items:start;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--ink);cursor:pointer}
+.pick:has(input:checked){border-color:var(--violet);background:rgba(124,92,252,.10)}
+.pick input{margin:2px 0 0;accent-color:var(--violet)}
+.pick .n{font:500 12.5px/1.35 var(--f-mono);overflow-wrap:anywhere}
+.pick .s{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.late-t{color:var(--danger-text)}.today-t{color:var(--orange)}
+.fmt{display:flex;gap:6px}
+.fmt button{appearance:none;width:34px;height:30px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--text);font:700 14px var(--f-body);cursor:pointer}
+.fmt button:hover{border-color:var(--muted)}
+.composer textarea{width:100%;min-height:150px;resize:vertical;background:var(--ink);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:14px 16px;font:14px/1.6 var(--f-body)}
+.preview{border:1px dashed var(--line);border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.6;min-height:46px;overflow-wrap:anywhere}
+.preview:empty::before{content:"Your update will look like this in Monday.com.";color:var(--muted)}
+.preview b{font-weight:700}
+.lbl{font:600 11px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.check{display:flex;gap:10px;align-items:center;font-size:14px;cursor:pointer}
+.check input{accent-color:var(--violet);width:16px;height:16px}
+.acts{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.abtn{appearance:none;font:600 13px/1 var(--f-body);border-radius:10px;padding:11px 16px;background:transparent;color:var(--text);border:1px solid var(--line);cursor:pointer}
+.abtn:hover{border-color:var(--muted)}
+.abtn.primary{background:linear-gradient(135deg,var(--violet),#5B3FE0);border-color:transparent;color:#fff}
+.abtn:disabled{opacity:.55;cursor:default}
+.confirm{border:1px solid color-mix(in srgb,var(--gold) 45%,var(--line));background:color-mix(in srgb,var(--gold) 9%,transparent);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.confirm p{margin:0;font-size:14px}
+.confirm ul,.results ul{margin:0;padding-left:18px;max-height:220px;overflow:auto;font:500 12.5px/1.6 var(--f-mono)}
+.results{display:flex;flex-direction:column;gap:10px}
+.results li{overflow-wrap:anywhere}
+.results .ok{color:var(--lume)}.results .bad{color:var(--danger-text)}
+.results a{color:inherit}
+.results .why{font-family:var(--f-body);color:var(--muted)}
+.empty-note{margin:0;color:var(--muted);font-size:14px}
+@media (max-width:860px){.layout{grid-template-columns:minmax(0,1fr)}.picks{max-height:360px}}
+@media (max-width:640px){.card{padding:18px}}
+</style>
+</head>
+<body data-page="post" data-crumb="Post update" data-auth="required">
+<div class="shell" id="app" hidden>
+<aside class="side"></aside>
+<div class="main">
+<header class="topbar"></header>
+<main class="content">
+<div class="wrap">
+  <header class="page-head">
+    <div>
+      <span class="eyebrow">Post update · Production board</span>
+      <h1>One update, <em>many collabs</em></h1>
+      <p class="lede"><span class="fresh" id="fresh"><i></i><span id="freshText">Loading your collabs…</span></span><span>Tick the collabs, write the update once, and it's posted (and pinned) on each one in Monday.com under your name.</span></p>
+    </div>
+  </header>
+  <div class="note" id="note" hidden></div>
+
+  <section class="layout">
+    <div class="card">
+      <h3>1 · Pick collabs</h3>
+      <div class="filters">
+        <input id="q" type="search" placeholder="Search collab or creator, e.g. Christmas2" aria-label="Search collabs">
+        <select id="clientSel" aria-label="Client"><option value="">All clients</option></select>
+        <select id="stageSel" aria-label="Stage"><option value="">All stages</option></select>
+      </div>
+      <div class="selbar"><span class="count" id="selCount">0 selected</span><span class="links"><button type="button" class="linkbtn" id="allBtn">Select all shown</button><button type="button" class="linkbtn" id="noneBtn">Clear</button></span></div>
+      <div class="picks" id="picks"><p class="empty-note">Loading…</p></div>
+    </div>
+
+    <div class="card composer">
+      <h3>2 · Write the update</h3>
+      <div class="fmt"><button type="button" id="boldBtn" title="Bold (Ctrl+B)" aria-label="Bold">B</button></div>
+      <textarea id="text" aria-label="Update to post" placeholder="e.g. Creator will only submit **RAW Files**!" maxlength="5000"></textarea>
+      <span class="lbl">Preview</span>
+      <div class="preview" id="preview"></div>
+      <label class="check"><input type="checkbox" id="pin" checked> Pin it to the top of each collab's updates</label>
+      <div class="acts"><button type="button" class="abtn primary" id="goBtn" disabled>Post to 0 collabs</button><span class="hint" id="goHint">Tick at least one collab.</span></div>
+
+      <div class="confirm" id="confirm" hidden>
+        <p id="confirmText"></p>
+        <ul id="confirmList"></ul>
+        <div class="acts"><button type="button" class="abtn primary" id="yesBtn">Post it</button><button type="button" class="abtn" id="backBtn">Back</button></div>
+      </div>
+
+      <div class="results" id="results" hidden></div>
+    </div>
+  </section>
+
+  <footer>This is the only page that changes anything in Monday.com: it adds the update you write, as you, on the collabs you tick. Nothing else is touched.</footer>
+</div>
+</main>
+</div>
+</div>
+
+<script src="/shell.js"></script>
+<script src="/collabs.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+let rows=[],picked=new Set(),mondayName="",posting=false,last=null;
+
+/* same conversion the server does, for the preview */
+const toHtml=t=>esc(t.trim()).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").split(/\r?\n/).join("<br>");
+
+/* ---------- picking ---------- */
+function shown(){
+  const q=$("q").value.trim().toLowerCase(),cl=$("clientSel").value,st=$("stageSel").value;
+  return rows.filter(r=>(!cl||r.client===cl)&&(!st||r.stage===st)&&(!q||(r.name+" "+r.creator).toLowerCase().includes(q)));
+}
+function fillSelect(sel,values,label){
+  const cur=sel.value,list=[...new Set(values)].filter(Boolean).sort((a,b)=>a.localeCompare(b));
+  sel.innerHTML=`<option value="">${label}</option>`+list.map(v=>`<option${v===cur?" selected":""}>${esc(v)}</option>`).join("");
+}
+function renderPicks(){
+  const list=shown();
+  $("picks").innerHTML=list.length?list.map(r=>{const left=daysUntil(r.deadline),cls=r.overdue?"late-t":left===0?"today-t":"";
+    return`<label class="pick"><input type="checkbox" data-id="${esc(r.id)}"${picked.has(r.id)?" checked":""}><span><span class="n">${esc(r.name)}</span><span class="s">${esc(r.stage)}${r.subStage?` · ${esc(r.subStage)}`:""}${r.creator?` · ${esc(r.creator)}`:""}${r.delays?` · <b class="${cls}">${esc(r.delays)}</b>`:""}</span></span></label>`}).join(""):
+    `<p class="empty-note">${rows.length?"No collabs match.":"No active collabs."}</p>`;
+  $("picks").querySelectorAll("input").forEach(c=>c.onchange=()=>{c.checked?picked.add(c.dataset.id):picked.delete(c.dataset.id);sync()});
+  sync();
+}
+function sync(){
+  const n=picked.size,ok=n>0&&n<=50&&$("text").value.trim().length>0;
+  $("selCount").textContent=`${n} selected`+(n>50?" · 50 at most":"");
+  $("goBtn").textContent=`Post to ${n} collab${n===1?"":"s"}`;
+  $("goBtn").disabled=!ok||posting;
+  $("goHint").textContent=!n?"Tick at least one collab.":n>50?"Pick 50 or fewer at a time.":!$("text").value.trim()?"Write the update.":"You'll confirm before anything is posted.";
+  $("preview").innerHTML=toHtml($("text").value);
+  if(!$("confirm").hidden&&!ok)$("confirm").hidden=true;
+}
+["q","clientSel","stageSel"].forEach(id=>$(id).addEventListener("input",renderPicks));
+$("allBtn").onclick=()=>{shown().forEach(r=>picked.add(r.id));renderPicks()};
+$("noneBtn").onclick=()=>{picked.clear();renderPicks()};
+
+/* ---------- writing ---------- */
+function bold(){
+  const t=$("text"),a=t.selectionStart,b=t.selectionEnd,v=t.value,sel=v.slice(a,b)||"bold text";
+  t.value=v.slice(0,a)+"**"+sel+"**"+v.slice(b);t.focus();t.setSelectionRange(a+2,a+2+sel.length);sync();
+}
+$("boldBtn").onclick=bold;
+$("text").addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="b"){e.preventDefault();bold()}});
+$("text").addEventListener("input",sync);
+
+/* ---------- posting ---------- */
+const byId=id=>rows.find(r=>r.id===id)||{id,name:"Collab "+id};
+$("goBtn").onclick=()=>{
+  const list=[...picked].map(byId),pin=$("pin").checked;
+  $("confirmText").textContent=`Post this update${pin?" and pin it":""} on ${list.length} collab${list.length===1?"":"s"}${mondayName?` as ${mondayName}`:""}? Monday.com notifies people who follow these collabs, so it can't be quietly undone.`;
+  $("confirmList").innerHTML=list.map(r=>`<li>${esc(r.name)}</li>`).join("");
+  $("confirm").hidden=false;$("results").hidden=true;$("yesBtn").focus();
+};
+$("backBtn").onclick=()=>{$("confirm").hidden=true};
+$("yesBtn").onclick=()=>send([...picked].map(id=>({id})),$("text").value,$("pin").checked);
+
+async function send(items,text,pin){
+  posting=true;$("yesBtn").disabled=true;$("yesBtn").textContent="Posting…";sync();
+  try{
+    const {results}=await api("/api/post",{items,text,pin});
+    /* keep earlier successes when this was a retry */
+    const prev=last&&last.text===text?last.results.filter(r=>!results.some(x=>x.id===r.id)):[];
+    last={text,pin,results:[...prev,...results]};
+    showResults();
+    if(last.results.every(r=>r.posted&&(r.pinned||!pin))){picked.clear();renderPicks()}
+  }catch(e){
+    showNote(e&&e.message?e.message:"Couldn't reach Monday.com. Nothing was posted from this attempt; try again.",true);
+  }finally{
+    posting=false;$("yesBtn").disabled=false;$("yesBtn").textContent="Post it";$("confirm").hidden=true;sync();
+  }
+}
+function showResults(){
+  const {results,pin,text}=last;
+  const done=results.filter(r=>r.posted&&(r.pinned||!pin)),failed=results.filter(r=>!(r.posted&&(r.pinned||!pin)));
+  const line=r=>{const it=byId(r.id),name=it.url?`<a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.name)}</a>`:esc(it.name);
+    if(r.posted&&(r.pinned||!pin))return`<li class="ok">✓ ${name}</li>`;
+    if(r.posted)return`<li class="bad">✗ ${name} <span class="why">posted, but not pinned: ${esc(r.error||"")}</span></li>`;
+    return`<li class="bad">✗ ${name} <span class="why">${esc(r.error||"not posted")}</span></li>`};
+  $("results").innerHTML=`<p class="hint"><b>${done.length} of ${results.length}</b> ${pin?"posted and pinned":"posted"}.${failed.length?" Retrying only redoes the ones that didn't finish; anything already posted won't be posted twice.":""}</p>
+    <ul>${[...failed,...done].map(line).join("")}</ul>
+    ${failed.length?'<div class="acts"><button type="button" class="abtn primary" id="retryBtn">Retry the rest</button></div>':""}`;
+  $("results").hidden=false;
+  const rb=$("retryBtn");if(rb)rb.onclick=()=>send(failed.map(r=>({id:r.id,updateId:r.updateId||undefined})),text,pin);
+}
+
+/* ---------- load ---------- */
+function showNote(t,err){const n=$("note");n.textContent=t;n.className="note"+(err?" err":"");n.hidden=!t}
+function showGate(msg){if(window.Shell)Shell.setUser(null);$("app").hidden=true;$("gate").hidden=false;$("gateErr").textContent=msg||"";$("gateErr").hidden=!msg}
+$("signout").onclick=async()=>{try{await api("/api/auth/logout")}catch(e){}showGate("")};
+function onData(raw,meta){
+  rows=Object.values(groupDigest(raw).groups).flat().sort((a,b)=>a.name.localeCompare(b.name));
+  const ids=new Set(rows.map(r=>r.id));picked=new Set([...picked].filter(id=>ids.has(id)));
+  fillSelect($("clientSel"),rows.map(r=>r.client),"All clients");
+  fillSelect($("stageSel"),rows.map(r=>r.stage),"All stages");
+  $("freshText").textContent=`${rows.length} active collabs · `+(meta.cached?`saved ${savedAgo(meta.at)}, refreshing…`:"updated "+new Date(meta.at).toLocaleTimeString("en-US",{timeZone:tz,hour:"numeric",minute:"2-digit"}));
+  renderPicks();
+}
+(async()=>{
+  try{
+    const cfg=await swr("digest",prev=>fetchDigestRaw(prev,false),onData);
+    if(!cfg.signedIn){showGate("");return}
+    mondayName=cfg.monday&&cfg.monday.name||"";
+  }catch(e){
+    if(e&&e.code==="not_signed_in"){showGate("Your session ended. Sign in again.");return}
+    if(rows.length){$("freshText").textContent+=" · couldn't refresh";return}
+    $("freshText").textContent="Couldn't load";showNote("Couldn't load your collabs from Monday.com. Try again in a minute.",true);
+  }
+})();
+sync();
+</script>
+</body>
+</html>

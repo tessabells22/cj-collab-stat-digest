@@ -23,7 +23,7 @@
       <h1>What needs <span id="who">you</span> on <em>Production</em>?</h1>
       <p class="lede"><span class="fresh" id="fresh"><i></i><span id="freshText">Connecting to Monday.com…</span></span><span>Live from Monday.com, refreshed every 5 minutes. Finished, handed-off and not-started collabs are left out.</span></p>
     </div>
-    <div class="head-actions"><button type="button" class="btn primary" id="refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>Refresh</button></div>
+    <div class="head-actions"><a class="btn" href="/post">Post to several</a><button type="button" class="btn primary" id="refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>Refresh</button></div>
   </header>
 
   <section class="panel" aria-label="Filters">
@@ -53,7 +53,7 @@
     </div>
   </section>
 
-  <footer id="foot">Read-only. Each person sees only the collabs where they are the CFS. Nothing is changed in Monday.</footer>
+  <footer id="foot">Each person sees only the collabs where they are the CFS. Nothing is changed in Monday from this page.</footer>
 </div>
 </main>
 </div>
@@ -324,7 +324,7 @@ function render(){
     wireRows(main);
     Object.entries(drafts).forEach(([id,val])=>{const d=main.querySelector(`details.row[data-id="${CSS.escape(id)}"]`);if(!d)return;const b=d.querySelector(".draft");b.hidden=false;b.querySelector("textarea").value=val});
   }
-  $("foot").textContent=`${active.length} active collabs${handledRows.length?`, ${handledRows.length} marked handled`:""}${current.dropped?`, ${current.dropped} finished, handed off or not started hidden`:""}. Read-only: each person sees only the collabs where they are the CFS.`;
+  $("foot").textContent=`${active.length} active collabs${handledRows.length?`, ${handledRows.length} marked handled`:""}${current.dropped?`, ${current.dropped} finished, handed off or not started hidden`:""}. Each person sees only the collabs where they are the CFS; nothing is changed in Monday from this page.`;
 }
 function setFresh(){
   const f=$("fresh"),t=$("freshText");

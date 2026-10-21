@@ -43,6 +43,9 @@
     "api/briefing/test.js": {
       "includeFiles": "public/collabs.js",
       "maxDuration": 30
+    },
+    "api/post.js": {
+      "maxDuration": 60
     }
   }
 }
