@@ -5,7 +5,7 @@ import { monday, AppError } from "./_lib.js";
 const BOARD = process.env.MONDAY_BOARD_ID || "18409265319";
 const COL = {
   stage: "color_mm26weve", deadline: "date_mm3rpv64", delays: "formula_mm5exx7", creator: "board_relation_mm57zxnz",
-  cfs: "multiple_person_mm2677g0", days: "formula_mm26np49", stageStart: "date_mm26qbn7",
+  cfs: "multiple_person_mm2677g0", days: "formula_mm26np49", stageStart: "date_mm26qbn7", pm: "multiple_person_mm26f5rp",
 };
 const SUB_IDS = ["color_mm26m684", "color_mm265k74", "color_mm266ame", "color_mm26y3mc", "color_mm57fna8", "color_mm26qtzn"];
 const COL_IDS = JSON.stringify([...Object.values(COL), ...SUB_IDS]);

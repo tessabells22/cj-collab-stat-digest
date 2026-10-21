@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Team meeting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/app.css">
+<link rel="stylesheet" href="/shell.css">
+<style>
+/* Team meeting: the JetCrew syncs (Mon / Wed / Fri). Pick a crew and the page lays out your
+   collabs for that crew's PM as an agenda: since the last meeting, late, due before the next one,
+   blockers, waiting on the client. Present hides the app chrome for screen sharing. */
+.wrap{max-width:1120px;gap:22px}
+.crews{display:flex;gap:8px;flex-wrap:wrap}
+.crew{appearance:none;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px 16px;border-radius:14px;border:1px solid var(--line);background:var(--deck);color:var(--text);cursor:pointer;font:inherit;min-width:170px}
+.crew b{font:600 15px/1.2 var(--f-display)}
+.crew span{font-size:12.5px;color:var(--muted)}
+.crew[aria-pressed="true"]{border-color:var(--violet);background:rgba(124,92,252,.12)}
+.crew:hover{border-color:var(--muted)}
+.crew.zero{opacity:.55}
+.bar2{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.when{font-size:14px;color:var(--muted)}
+.when b{color:var(--text);font-weight:600}
+.tools2{display:flex;gap:8px;flex-wrap:wrap}
+.abtn{appearance:none;font:600 13px/1 var(--f-body);border-radius:10px;padding:11px 16px;background:transparent;color:var(--text);border:1px solid var(--line);cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.abtn:hover{border-color:var(--muted)}
+.abtn.primary{background:linear-gradient(135deg,var(--violet),#5B3FE0);border-color:transparent;color:#fff}
+.abtn svg{width:16px;height:16px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:12px}
+.stat{background:var(--deck);border:1px solid var(--line);border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:6px;position:relative;overflow:hidden}
+.stat .k{font:600 10.5px/1.2 var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.stat .v{font:600 34px/1 var(--f-body);font-variant-numeric:tabular-nums}
+.stat.flag::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--fc)}
+.agenda{display:flex;flex-direction:column;gap:16px}
+.block{background:var(--deck);border:1px solid var(--line);border-radius:18px;padding:18px 22px;display:flex;flex-direction:column;gap:10px}
+.block h3{margin:0;display:flex;align-items:baseline;gap:10px;font:600 17px/1.3 var(--f-display)}
+.block h3 .n{font:500 13px var(--f-mono);color:var(--muted)}
+.block h3 i{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none;align-self:center}
+.block .hint{margin:0;font-size:13px;color:var(--muted)}
+.items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.it{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.9fr) minmax(0,1.6fr);gap:6px 16px;padding:11px 0;border-top:1px solid var(--line);align-items:start}
+.it:first-child{border-top:0}
+.it .mnm{font:500 13px/1.35 var(--f-mono);overflow-wrap:anywhere}
+.it .mnm a{color:inherit;text-decoration:none}
+.it .mnm a:hover{text-decoration:underline;text-underline-offset:3px}
+.it .mcr{display:block;font:13px var(--f-body);color:var(--muted);margin-top:2px}
+.it .mst{font-size:13px}
+.it .mst .mtm{display:block;margin-top:2px;color:var(--muted)}
+.it .mst .mtm.late{color:var(--danger-text);font-weight:600}.it .mst .mtm.today{color:var(--orange);font-weight:600}
+.it .mup{font-size:13px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere}
+.it .mup b{color:var(--text);font-weight:600}
+.more{appearance:none;background:none;border:0;padding:6px 0 0;color:var(--violet);font:600 13px var(--f-body);cursor:pointer;align-self:flex-start}
+.empty-note{margin:0;color:var(--muted);font-size:14px}
+.notes textarea{width:100%;min-height:90px;resize:vertical;background:var(--ink);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font:14px/1.6 var(--f-body)}
+.ok-note{font-size:12.5px;color:var(--muted)}
+@media (max-width:760px){.it{grid-template-columns:minmax(0,1fr)}.crew{min-width:0;flex:1 1 140px}}
+/* present: no sidebar or top bar, bigger type, for sharing your screen */
+body.present .side,body.present .topbar,body.present .scrim,body.present .no-present{display:none!important}
+body.present .shell{grid-template-columns:minmax(0,1fr)!important}
+body.present .wrap{max-width:1280px}
+body.present .page-head h1{font-size:clamp(30px,4vw,46px)}
+body.present .it .mnm{font-size:15px}
+body.present .it .mst,body.present .it .mup,body.present .it .mcr{font-size:15px}
+body.present .block h3{font-size:20px}
+body.present .stat .v{font-size:40px}
+.exitp{display:none}
+body.present .exitp{display:inline-flex;position:fixed;right:16px;top:16px;z-index:50}
+</style>
+</head>
+<body data-page="meeting" data-crumb="Team meeting" data-auth="required">
+<div class="shell" id="app" hidden>
+<aside class="side"></aside>
+<div class="main">
+<header class="topbar"></header>
+<main class="content">
+<div class="wrap">
+  <header class="page-head">
+    <div>
+      <span class="eyebrow" id="eyebrow">Team meeting · JetCrew sync</span>
+      <h1 id="title">Your updates for <em>the team</em></h1>
+      <p class="lede"><span class="fresh" id="fresh"><i></i><span id="freshText">Loading your collabs…</span></span><span class="no-present">Pick your JetCrew, then press Present to share it on the call. JetCrews meet Monday, Wednesday and Friday.</span></p>
+    </div>
+  </header>
+  <div class="note" id="note" hidden></div>
+
+  <div class="crews no-present" id="crews" role="group" aria-label="JetCrew"></div>
+
+  <div class="bar2">
+    <span class="when" id="when"></span>
+    <span class="tools2 no-present">
+      <button type="button" class="abtn primary" id="presentBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Present</button>
+      <button type="button" class="abtn" id="copyBtn">Copy as text</button>
+      <button type="button" class="abtn" id="refreshBtn">Refresh</button>
+    </span>
+  </div>
+
+  <div class="stats" id="stats"></div>
+  <div class="agenda" id="agenda"></div>
+
+  <div class="block notes no-present">
+    <h3>Your talking points</h3>
+    <p class="hint">Anything else to raise with this crew. Saved in this browser, per crew, and included in Copy as text.</p>
+    <textarea id="notes" placeholder="e.g. Need client feedback on Scrambly Christmas2 by Thursday"></textarea>
+    <span class="ok-note" id="notesSaved"></span>
+  </div>
+
+  <footer class="no-present">Shows only your collabs as CFS where the crew's PM is on the PM column. Nothing is changed in Monday.com.</footer>
+</div>
+</main>
+</div>
+</div>
+<button type="button" class="abtn exitp" id="exitBtn">Exit presenting (Esc)</button>
+
+<script src="/shell.js"></script>
+<script src="/collabs.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+/* JetCrews and their PMs. A collab belongs to a crew when that PM is on its PM column. */
+const CREWS=[
+  {key:"A",name:"JetCrew A",pm:"Kaycee Inza-Cruz"},
+  {key:"B",name:"JetCrew B",pm:"Olimpio Brunetto"},
+  {key:"C",name:"JetCrew C",pm:"Djanice Bettencourt"},
+];
+const MEET_DAYS=[1,3,5]; /* Mon, Wed, Fri */
+const SHOW=6;
+let rows=[],approved=[],crew=store.get("cd.crew")||"",open={};
+
+/* ---------- meeting dates, Manila calendar days ---------- */
+const dow=n=>new Date(n*864e5).getUTCDay();
+const dayName=n=>new Date(n*864e5).toLocaleDateString("en-US",{timeZone:"UTC",weekday:"long"});
+const dayShort=n=>new Date(n*864e5).toLocaleDateString("en-US",{timeZone:"UTC",weekday:"short",month:"short",day:"numeric"});
+function meetings(){
+  const today=todayNum();let last=today-1,next=today+1;
+  while(!MEET_DAYS.includes(dow(last)))last--;
+  while(!MEET_DAYS.includes(dow(next)))next++;
+  return{today,isToday:MEET_DAYS.includes(dow(today)),last,next};
+}
+
+/* ---------- crews ---------- */
+const pmNames=s=>String(s||"").split(/\s*,\s*/).map(norm).filter(Boolean);
+const inCrew=(r,c)=>pmNames(r.pm).includes(norm(c.pm));
+const crewRows=c=>c?rows.filter(r=>inCrew(r,c)):rows.filter(r=>!CREWS.some(x=>inCrew(r,x)));
+function crewList(){
+  const list=CREWS.map(c=>({...c,n:crewRows(c).length}));
+  const none=crewRows(null).length;
+  if(none)list.push({key:"none",name:"No JetCrew PM",pm:"",n:none});
+  return list;
+}
+const current=()=>crew==="none"?null:CREWS.find(c=>c.key===crew);
+
+/* ---------- agenda ---------- */
+const dueDay=r=>dayNum(r.deadline);
+function sections(list,M){
+  const late=list.filter(r=>r.overdue&&r.stage!=="Client Review");
+  const dueSoon=list.filter(r=>{const d=dueDay(r);return d!=null&&d>=M.today&&d<=M.next&&r.stage!=="Client Review"});
+  const blockers=list.filter(r=>!late.includes(r)&&!dueSoon.includes(r)&&(r.group==="needsYou"||r.group==="stuck"));
+  const moved=list.filter(r=>{const s=dayNum(r.stageStart);return s!=null&&s>=M.last});
+  const waiting=list.filter(r=>r.stage==="Client Review");
+  const byDue=(a,b)=>(dueDay(a)??1e9)-(dueDay(b)??1e9);
+  return[
+    {key:"late",title:"Late",c:"var(--danger)",hint:"Past the deadline. Say what's holding each one up and the new ETA.",items:late.sort((a,b)=>b.daysLate-a.daysLate)},
+    {key:"due",title:`Due by the next meeting (${dayShort(M.next)})`,c:"#F59E3B",hint:"Deadlines from today up to the next sync.",items:dueSoon.sort(byDue)},
+    {key:"block",title:"Blockers and asks",c:"var(--violet)",hint:"Your move (pending asset, clarification, revisions) or stuck 5+ days in the same stage.",items:blockers.sort((a,b)=>(b.daysInStage??0)-(a.daysInStage??0))},
+    {key:"moved",title:`Moved since ${dayName(M.last)}`,c:"var(--crystal)",hint:"Changed stage since the last meeting.",items:moved.sort(byDue)},
+    {key:"waiting",title:"Waiting on the client",c:"#9cd326",hint:"In Client Review. Anything to chase?",items:waiting.sort((a,b)=>(b.daysInStage??0)-(a.daysInStage??0))},
+  ];
+}
+function itemHTML(r){
+  const left=daysUntil(r.deadline),cls=r.overdue?"late":left===0?"today":"";
+  const u=r.latest||{};
+  return`<li class="it">
+    <span><span class="mnm">${r.url?`<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.name)}</a>`:esc(r.name)}</span><span class="mcr">${esc(r.creator||"No creator")}</span></span>
+    <span class="mst">${esc(r.stage)}${r.subStage?` · ${esc(r.subStage)}`:""}<span class="mtm ${cls}">${r.deadline?esc(r.delays||fmtDue(r.deadline)):"No deadline"}${r.daysInStage!=null?` · ${r.daysInStage}d in stage`:""}</span></span>
+    <span class="mup">${u.text?`<b>${esc(u.by||"Someone")}</b> · ${esc(ago(u.at))}: ${esc(u.text.length>160?u.text.slice(0,157)+"…":u.text)}`:"No updates yet"}</span>
+  </li>`;
+}
+function render(){
+  const M=meetings(),list=crewList();
+  if(!crew||!list.some(c=>c.key===crew))crew=(list.find(c=>c.n)||list[0]).key;
+  $("crews").innerHTML=list.map(c=>`<button type="button" class="crew${c.n?"":" zero"}" data-k="${c.key}" aria-pressed="${c.key===crew}"><b>${esc(c.name)}</b><span>${c.pm?`PM ${esc(c.pm)} · `:""}${c.n} collab${c.n===1?"":"s"}</span></button>`).join("");
+  $("crews").querySelectorAll(".crew").forEach(b=>b.onclick=()=>{crew=b.dataset.k;store.set("cd.crew",crew);open={};render()});
+  const c=current(),mine=crewRows(c),name=c?c.name:"Collabs with no JetCrew PM";
+  const meetLabel=M.isToday?`${dayName(M.today)}'s sync`:`Next sync: ${dayName(M.next)}`;
+  $("eyebrow").textContent=`Team meeting · ${name}${c?` · PM ${c.pm}`:""}`;
+  $("title").innerHTML=`${swr.me?esc(firstName(swr.me))+"'s":"Your"} updates for <em>${esc(name)}</em>`;
+  $("when").innerHTML=`<b>${esc(meetLabel)}</b> · since ${esc(dayName(M.last))} ${esc(dayShort(M.last).replace(/^\w+, /,""))}`;
+  const S=sections(mine,M);
+  const appr=approved.filter(r=>(c?inCrew(r,c):!CREWS.some(x=>inCrew(r,x)))&&dayNum(r.stageStart)>=M.last);
+  const stat=(k,v,fc)=>`<div class="stat${fc&&v?" flag":""}"${fc?` style="--fc:${fc}"`:""}><span class="k">${k}</span><span class="v">${v}</span></div>`;
+  $("stats").innerHTML=stat("Active",mine.length)+stat("Late",S[0].items.length,"var(--danger)")+stat(`Due by ${dayShort(M.next).split(",")[0]}`,S[1].items.length,"#F59E3B")+
+    stat("Blockers",S[2].items.length,"var(--violet)")+stat(`Approved since ${dayShort(M.last).split(",")[0]}`,appr.length,"var(--lume)");
+  $("agenda").innerHTML=(appr.length?`<section class="block"><h3><i style="background:var(--lume)"></i>Wins: approved since ${esc(dayName(M.last))} <span class="n">${appr.length}</span></h3><ul class="items">${appr.map(r=>`<li class="it"><span><span class="mnm">${r.url?`<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.name)}</a>`:esc(r.name)}</span><span class="mcr">${esc(r.creator||"")}</span></span><span class="mst">Approved</span><span class="mup"></span></li>`).join("")}</ul></section>`:"")+
+    S.map(s=>{const all=s.items,shown=open[s.key]?all:all.slice(0,SHOW);
+      return`<section class="block"><h3><i style="background:${s.c}"></i>${esc(s.title)} <span class="n">${all.length}</span></h3>
+        ${all.length?`<p class="hint">${esc(s.hint)}</p><ul class="items">${shown.map(itemHTML).join("")}</ul>${all.length>SHOW?`<button type="button" class="more" data-k="${s.key}">${open[s.key]?"Show fewer":`Show all ${all.length}`}</button>`:""}`:`<p class="empty-note">Nothing here.</p>`}
+      </section>`}).join("");
+  $("agenda").querySelectorAll(".more").forEach(b=>b.onclick=()=>{open[b.dataset.k]=!open[b.dataset.k];render()});
+  $("notes").value=store.get("cd.meetnotes."+crew)||"";$("notesSaved").textContent="";
+}
+
+/* ---------- notes, copy, present ---------- */
+let nt;$("notes").addEventListener("input",()=>{clearTimeout(nt);nt=setTimeout(()=>{store.set("cd.meetnotes."+crew,$("notes").value);$("notesSaved").textContent="Saved"},300)});
+function asText(){
+  const M=meetings(),c=current(),mine=crewRows(c),S=sections(mine,M);
+  const appr=approved.filter(r=>(c?inCrew(r,c):!CREWS.some(x=>inCrew(r,x)))&&dayNum(r.stageStart)>=M.last);
+  const line=r=>`• ${r.name}${r.creator?` (${r.creator})`:""}: ${r.stage}${r.subStage?` · ${r.subStage}`:""}${r.deadline?`, ${r.delays}`:""}`;
+  const out=[`${c?c.name:"No JetCrew"} update from ${swr.me||"me"}: ${mine.length} active, ${S[0].items.length} late, ${S[1].items.length} due by ${dayShort(M.next)}`];
+  if(appr.length)out.push("",`Approved since ${dayName(M.last)}:`,...appr.map(r=>`• ${r.name}`));
+  S.forEach(s=>{if(s.items.length)out.push("",`${s.title}:`,...s.items.map(line))});
+  const n=$("notes").value.trim();if(n)out.push("","Other points:",n);
+  return out.join("\n");
+}
+$("copyBtn").onclick=async e=>{const b=e.currentTarget;try{await navigator.clipboard.writeText(asText());b.textContent="Copied"}catch(err){b.textContent="Couldn't copy"}setTimeout(()=>b.textContent="Copy as text",1600)};
+function present(on){
+  document.body.classList.toggle("present",on);
+  try{if(on&&!document.fullscreenElement)document.documentElement.requestFullscreen().catch(()=>{});if(!on&&document.fullscreenElement)document.exitFullscreen().catch(()=>{})}catch(e){}
+  scrollTo(0,0);
+}
+$("presentBtn").onclick=()=>present(true);$("exitBtn").onclick=()=>present(false);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&document.body.classList.contains("present"))present(false)});
+document.addEventListener("fullscreenchange",()=>{if(!document.fullscreenElement&&document.body.classList.contains("present"))present(false)});
+
+/* ---------- load ---------- */
+function showNote(t,err){const n=$("note");n.textContent=t;n.className="note"+(err?" err":"");n.hidden=!t}
+function showGate(msg){if(window.Shell)Shell.setUser(null);$("app").hidden=true;$("gate").hidden=false;$("gateErr").textContent=msg||"";$("gateErr").hidden=!msg}
+$("signout").onclick=async()=>{try{await api("/api/auth/logout")}catch(e){}showGate("")};
+function onData(raw,meta){
+  const r=groupDigest(raw);swr.me=(r.me&&r.me.name)||"";
+  rows=Object.values(r.groups).flat();
+  /* approved collabs are left out of the digest but count as wins here */
+  approved=(raw.items||[]).filter(it=>cv(it,COL.stage)==="Approved").map(it=>({id:String(it.id),name:String(it.name||"").trim(),url:it.url,creator:cv(it,COL.creator),pm:cv(it,COL.pm),stageStart:cv(it,COL.stageStart)}));
+  $("freshText").textContent=`${rows.length} active collabs · `+(meta.cached?`saved ${savedAgo(meta.at)}, refreshing…`:"updated "+new Date(meta.at).toLocaleTimeString("en-US",{timeZone:tz,hour:"numeric",minute:"2-digit"}));
+  render();
+}
+async function load(fresh){
+  try{
+    const cfg=await swr("digest",prev=>fetchDigestRaw(prev,fresh),onData);
+    if(!cfg.signedIn)showGate("");
+  }catch(e){
+    if(e&&e.code==="not_signed_in"){showGate("Your session ended. Sign in again.");return}
+    if(rows.length){$("freshText").textContent+=" · couldn't refresh";return}
+    $("freshText").textContent="Couldn't load";showNote("Couldn't load your collabs from Monday.com. Try again in a minute.",true);
+  }
+}
+$("refreshBtn").onclick=()=>load(true);
+load(false);
+</script>
+</body>
+</html>

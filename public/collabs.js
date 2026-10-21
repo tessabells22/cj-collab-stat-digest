@@ -2,7 +2,7 @@
    Used by the digest and the Home snapshot so both count collabs the same way.
    Classic script: everything here is a global. */
 const COL={stage:"color_mm26weve",deadline:"date_mm3rpv64",delays:"formula_mm5exx7",creator:"board_relation_mm57zxnz",cfs:"multiple_person_mm2677g0",
-  days:"formula_mm26np49",stageStart:"date_mm26qbn7"};
+  days:"formula_mm26np49",stageStart:"date_mm26qbn7",pm:"multiple_person_mm26f5rp"};
 /* sub-stage column per stage */
 const SUB={"Creative Direction":"color_mm26m684","Production":"color_mm265k74","Post-Production":"color_mm266ame","QC - Production":"color_mm26y3mc",
   "QC - Post-Production":"color_mm57fna8","Client Review":"color_mm26qtzn"};
@@ -73,7 +73,7 @@ function buildRow(it,updates,me){
   let mention=null;
   if(meName)(updates||[]).forEach(u=>[u,...(u.replies||[])].forEach(x=>{
     if(norm(x.creator&&x.creator.name)!==meName&&norm(x.text_body).includes("@"+meName)&&(!mention||ts(x.created_at)>ts(mention.created_at)))mention=x}));
-  const row={id:it.id,name:String(it.name||"").trim(),url:it.url,stage:stageName,subStage:sub,creator,deadline,delays:"",daysInStage:days,
+  const row={id:it.id,name:String(it.name||"").trim(),url:it.url,stage:stageName,subStage:sub,creator,pm:cv(it,COL.pm),deadline,delays:"",daysInStage:days,
     mentionsMe,mentionAt:mention?mention.created_at:"",mentionBy:mention&&mention.creator?mention.creator.name:"",latest:p?{text:text.length>220?text.slice(0,217)+"…":text,by,at:p.created_at,isReply:p.isReply,replyTo:p.replyTo}:{} };
   /* exclusions that need the posts */
   const handoff=p&&meName&&norm(by)===meName&&/spark/i.test(text)&&(/post(ed)?\s*link/i.test(text)||/https?:\/\/\S*(tiktok|instagram|youtu)/i.test(text));
