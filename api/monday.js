@@ -14,7 +14,8 @@ export async function POST(request) {
     const me = { id: user.id, name: user.name };
 
     /* Active collabs and their latest updates in one round trip. `have` maps item id → updated_at the
-       browser already holds updates for; only items that changed since then are re-read. */
+       browser already holds updates for; those items are skipped. The pages send an empty map, because a
+       new update doesn't always change updated_at in Monday. */
     if (body.op === "digest") {
       const items = await activeItems(user, { fresh });
       const have = body.have && typeof body.have === "object" ? body.have : {};

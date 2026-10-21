@@ -271,13 +271,13 @@ function render(){
   const searching=!!query;
   /* chips: groups (urgency) or clients */
   if(view==="urgency"){
-    const counts=Object.fromEntries(GROUPS.map(g=>[g.key,active.filter(r=>r.group===g.key&&(!searching||matches(r))).length]));
+    const counts=Object.fromEntries(GROUPS.map(g=>[g.key,(searching?all:active).filter(r=>r.group===g.key&&(!searching||matches(r))).length]));
     if(!counts[tab]&&!store.get("cd.tab")){const f=GROUPS.find(g=>counts[g.key]);if(f)tab=f.key}
     $("tabs").innerHTML=GROUPS.map(g=>{const on=!searching&&!special&&tab===g.key;
       return `<button class="fchip${on?" on":""}${counts[g.key]?"":" zero"}" role="tab" aria-selected="${on}" data-k="${g.key}"><i style="background:${g.c}"></i>${g.label} <b>${counts[g.key]}</b></button>`}).join("");
     $("tabs").querySelectorAll(".fchip").forEach(b=>b.onclick=()=>{tab=b.dataset.k;special=null;limit=PAGE;store.set("cd.tab",tab);if(query){query="";$("q").value=""}render()});
   }else{
-    const byClient={};active.forEach(r=>{if(!searching||matches(r))byClient[r.client]=(byClient[r.client]||0)+1});
+    const byClient={};(searching?all:active).forEach(r=>{if(!searching||matches(r))byClient[r.client]=(byClient[r.client]||0)+1});
     const names=Object.keys(byClient).sort((a,b)=>byClient[b]-byClient[a]||a.localeCompare(b));
     if(clientTab!=="all"&&!names.includes(clientTab))clientTab="all";
     const total=Object.values(byClient).reduce((a,b)=>a+b,0);
@@ -296,7 +296,8 @@ function render(){
   let pool,title,showGroup=true;
   if(special==="handled"){pool=handledRows;title="Handled, hidden until the stage moves or you're mentioned"}
   else if(special==="new"){pool=newRows;title="New since your last visit"}
-  else if(searching){pool=active;title="Search results"+(view==="client"?" across clients":" in all groups")}
+  /* search also looks through collabs marked handled (they carry a Handled tag), so nothing is unfindable */
+  else if(searching){pool=all;title="Search results"+(view==="client"?" across clients":" in all groups")+(handledRows.some(matches)?", handled included":"")}
   else if(view==="client"){pool=clientTab==="all"?active:active.filter(r=>r.client===clientTab);title=clientTab==="all"?"All clients":clientTab}
   else{pool=active.filter(r=>r.group===tab);title=(GROUP_OF[tab]||{}).label||"";showGroup=false}
   const stages=[...new Set(pool.map(r=>r.stage).filter(Boolean))].sort();
