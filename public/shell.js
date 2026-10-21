@@ -14,6 +14,7 @@
     kpi: svg('<path d="M3 3v18h18"/><path d="M7 15v2M11 11v6M15 7v10M19 12v5"/>'),
     creators: svg('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 20a6.5 6.5 0 0 0-3-5.5"/>'),
     messages: svg('<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.7A8 8 0 1 1 21 12z"/><path d="M8.5 10.5h7M8.5 13.5h4.5"/>'),
+    meeting: svg('<circle cx="12" cy="7" r="3"/><circle cx="4.5" cy="10" r="2.2"/><circle cx="19.5" cy="10" r="2.2"/><path d="M6.5 20a5.5 5.5 0 0 1 11 0M1.5 19a3.5 3.5 0 0 1 4.5-3.3M22.5 19a3.5 3.5 0 0 0-4.5-3.3"/>'),
     post: svg('<path d="M12 17v5"/><path d="M9 3h6l-1 6 4 4v2H6v-2l4-4z"/>'),
     guide: svg('<path d="M4 19.5V5a2 2 0 0 1 2-2h14v18H6.5A2.5 2.5 0 0 1 4 18.5z"/><path d="M8 7h8M8 11h6"/>'),
     moon: svg('<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>'),
@@ -28,6 +29,7 @@
     { id: "kpi", href: "/kpi", label: "Weekly KPIs" },
     { id: "creators", href: "/creators", label: "Creators" },
     { id: "messages", href: "/messages", label: "Messages" },
+    { id: "meeting", href: "/meeting", label: "Team meeting" },
     { id: "post", href: "/post", label: "Post update" },
     { id: "guide", href: "/guide", label: "Guide" },
   ];
