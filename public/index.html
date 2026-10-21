@@ -111,7 +111,7 @@ function showBriefing(cfg){
 const $=id=>document.getElementById(id);
 const GROUP=Object.fromEntries(GROUPS.map((g,i)=>({...g,i})).map(g=>[g.key,g]));
 const BIG=["needsYou","dueToday","late"];
-const SMALL=[["waiting","waiting on client"],["stuck","stuck 5d+"],["changed","changed in 24h"]];
+const SMALL=[["waiting","waiting on client"],["stuck","stuck 5d+"],["changed","changed in 24h"],["onHold","on hold"]];
 let shown=false;
 async function loadToday(){
   try{

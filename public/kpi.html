@@ -255,12 +255,14 @@ function compute(){
       due:dueIn.length,dueDone:dueIn.filter(r=>FINISHED.has(r.stage)).length,dueOpen:dueIn.filter(r=>!FINISHED.has(r.stage)).length,
       dueLate:dueIn.filter(r=>!FINISHED.has(r.stage)&&r.deadline<today).length};
   });
-  const late=active.filter(r=>r.stage!=="Client Review"&&r.deadline!=null&&r.deadline<today);
-  const stuck=active.filter(r=>r.stage!=="Client Review"&&r.stage!=="On Hold"&&(r.days??0)>=5);
+  /* on-hold collabs are paused: kept out of late, stuck and upcoming deadlines, counted on their own */
+  const onHold=active.filter(r=>isOnHold(r.stage,r.sub)),going=active.filter(r=>!isOnHold(r.stage,r.sub));
+  const late=going.filter(r=>r.stage!=="Client Review"&&r.deadline!=null&&r.deadline<today);
+  const stuck=going.filter(r=>r.stage!=="Client Review"&&(r.days??0)>=5);
   const cr=active.filter(r=>r.stage==="Client Review");
   const revision=active.filter(r=>/^revisions?$/i.test(r.stage)||/revision/i.test(r.sub));
-  const upcoming=Array.from({length:14},(_,i)=>{const day=today+i;return{day,items:active.filter(r=>r.deadline===day)}});
-  return{today,perWeek,active,late,stuck,cr,revision,upcoming};
+  const upcoming=Array.from({length:14},(_,i)=>{const day=today+i;return{day,items:going.filter(r=>r.deadline===day)}});
+  return{today,perWeek,active,late,stuck,cr,revision,upcoming,onHold};
 }
 
 /* ---------- months: calendar months in Manila time ----------
@@ -326,6 +328,7 @@ function tiles(k){
     {k:"Stuck 5d+",v:k.stuck.length,d:"Same stage 5 days or more",fc:k.stuck.length?"var(--gold)":""},
     {k:"Waiting on client",v:k.cr.length,d:k.cr.length?`Avg ${avgDays(k.cr)} in review`:"Nothing in Client Review"},
     {k:"In revision",v:k.revision.length,d:"Revision stage or sub-stage"},
+    {k:"On hold",v:k.onHold.length,d:"Paused; not counted as late or stuck"},
   ].map(t=>`<div class="tile${t.fc?" flag":""}"${t.fc?` style="--fc:${t.fc}"`:""}><span class="k">${t.k}</span><span class="v">${t.v}</span><span class="d">${t.d}</span></div>`).join("");
 }
 

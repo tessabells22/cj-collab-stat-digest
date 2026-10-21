@@ -46,7 +46,7 @@ export function briefingBlocks(b) {
   const first = String(b.user.name || "").split(" ")[0] || "there";
   const n = (k) => b.groups[k].length;
   const counts = `*${n("needsYou")}* needs you  ·  *${n("dueToday")}* due today  ·  *${n("late")}* late`;
-  const meta = `${b.active} active · ${n("waiting")} waiting on client · ${n("stuck")} stuck 5d+ · ${n("changed")} changed in 24h`;
+  const meta = `${b.active} active · ${n("waiting")} waiting on client · ${n("stuck")} stuck 5d+ · ${n("changed")} changed in 24h${n("onHold") ? ` · ${n("onHold")} on hold` : ""}`;
   const url = appUrl();
   const blocks = [
     { type: "header", text: { type: "plain_text", text: `Good morning, ${first}` } },
