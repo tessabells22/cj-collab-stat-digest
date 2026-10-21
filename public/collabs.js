@@ -122,12 +122,11 @@ async function api(path,body){
   }
   return data;
 }
-/* Active collabs + their latest updates in one request. prev is the last raw copy (or null): updates
-   for items that haven't changed since are reused, and only the changed ones are re-read on the server. */
+/* Active collabs + their latest updates in one request. Updates are re-read for every collab each time:
+   a new update or comment doesn't always change the item's updated_at in Monday, so reusing updates for
+   "unchanged" items missed new comments and @mentions. prev is kept for the callers' signature. */
 async function fetchDigestRaw(prev,fresh){
-  const have={};
-  if(prev&&prev.items)prev.items.forEach(it=>{const id=String(it.id);if(prev.updates&&prev.updates[id])have[id]=it.updated_at});
-  const p=await api("/api/monday",{op:"digest",have,fresh:!!fresh});
+  const p=await api("/api/monday",{op:"digest",have:{},fresh:!!fresh});
   const got=new Set((p.fetched||[]).map(String)),updates={};
   (p.items||[]).forEach(it=>{const id=String(it.id);updates[id]=got.has(id)?(p.updates[id]||[]):(prev&&prev.updates&&prev.updates[id])||[]});
   return{me:p.me,items:p.items||[],updates};
