@@ -275,8 +275,8 @@ syncSteps();
 const STAGE_HEX={"Creative Direction":"#ffcb00","Production":"#9d50dd","QC - Production":"#784bd1","Post-Production":"#579bfc","QC - Post-Production":"#5a86d6","Client Review":"#9cd326","Approved":"#00c875","Planning":"#66ccff"};
 const GROUPS=[
   {key:"needsYou",label:"Needs you",c:"var(--violet)",why:"<b>Someone @mentioned you</b> in the newest update or comment, or the collab sits in a sub-stage that's on you: Pending Asset, Needs Clarification, Revision, Creator Reassignment, Contracting or Product Access. One exception: Pending Asset in Post-Production is on the PP Manager, not you. Start here every time. If it's also due today or late, it shows in that group instead, with a Your move or Mentioned you tag."},
-  {key:"dueToday",label:"Due today",c:"#F59E3B",why:"<b>Due today and not with the client</b>, the same as Deadline today on the board. These come before Needs you, so nothing due today hides elsewhere; a Your move or Mentioned you tag says if it's also on you."},
-  {key:"late",label:"Late",c:"var(--danger)",why:"<b>Past the deadline and not with the client</b>, worst first. Each row shows how many days late, and a Your move or Mentioned you tag if that applies too."},
+  {key:"dueToday",label:"Due today",c:"#F59E3B",why:"<b>Due today in a stage you run:</b> Production · Pending, Contracting, Video Production or Whitelisting (also during Posting), the same as Deadline today on the board. Other teams' stages don't count here. These come before Needs you, so nothing due today hides elsewhere; a Your move or Mentioned you tag says if it's also on you."},
+  {key:"late",label:"Late",c:"var(--danger)",why:"<b>Past the deadline in a stage you run</b> (the same Production sub-stages as Due today), worst first. Each row shows how many days late, and a Your move or Mentioned you tag if that applies too."},
   {key:"changed",label:"Changed 24h",c:"var(--crystal)",why:"<b>Something happened in the last 24 hours:</b> a new update, a new comment on an older update, or a stage change. Client feedback on a Client Review collab lands here too."},
   {key:"waiting",label:"Waiting on client",c:"#9cd326",why:"<b>In Client Review with nothing new.</b> The ball is with the client, not you. Sorted by how long they've had it, so a weekly chase is quick."},
   {key:"stuck",label:"Stuck 5d+",c:"var(--gold)",why:"<b>Five or more days in the same stage</b> with nothing above applying. Worth a nudge to the creator or the team."},
@@ -330,14 +330,15 @@ const QUIZ=[
   {t:"A teammate @mentions you in a comment on a collab that is also 3 days past its deadline.",m:"Client Review · Submitted · due 3 days ago",a:"needsYou",why:"It's in Client Review, so it never counts as late: the client has it. The mention puts it in Needs you."},
   {t:"A Production collab is in Contracting and due today.",m:"Production · Contracting · due today",a:"dueToday",why:"Deadlines come before Needs you, as on the board, so it shows in Due today with a Your move: Contracting tag."},
   {t:"A collab has been in Client Review · Submitted for 9 days. No new posts, deadline is next week.",m:"9 days in stage · due next week",a:"waiting",why:"It's with the client and nothing changed today, so it goes to Waiting on client, not Stuck. The ball isn't in your court."},
-  {t:"A Production collab is 4 days past its deadline. Last post was a week ago.",m:"Production · Video Production · 4 days late",a:"late",why:"Not with the client and past the deadline, so it lands in Late, sorted near the top because it's 4 days over."},
+  {t:"A Production collab is 4 days past its deadline. Last post was a week ago.",m:"Production · Video Production · 4 days late",a:"late",why:"Video Production is a stage you run and it's past the deadline, so it lands in Late, sorted near the top because it's 4 days over."},
+  {t:"A collab in Post-Production · In Progress is due today. No new posts.",m:"Post-Production · In Progress · due today · 2 days in stage",a:"other",why:"Post-Production is run by another team, so it doesn't count toward Due today. Nothing else applies, so it sits in Everything else (the deadline still shows on the row)."},
   {t:"Your collab's sub-stage is Pending Asset while it's still in Production. The deadline is in two weeks.",m:"Production · Pending Asset",a:"needsYou",why:"In Production, Pending Asset means you need to get the asset from the creator, so it lands in Needs you."},
   {t:"A collab in Post-Production shows Pending Asset. It's been 6 days, no new posts, deadline next week.",m:"Post-Production · Pending Asset · 6 days in stage",a:"stuck",why:"In Post-Production the asset comes from the PP Manager, not the CFS, so it doesn't count as your move. With 6 days in the stage it lands in Stuck."},
   {t:"The editor replied to an older update an hour ago. The collab is due next week and moved stage 2 days ago.",m:"Reply 1 h ago · 2 days in stage",a:"changed",why:"A comment counts as the latest post. A new post in the last 24 hours puts it in Changed 24h."},
   {t:"The client approved the final cut. Stage is now Approved.",m:"Approved",a:"hidden",why:"Approved is finished work, so the page hides it. You won't see it in any group."},
   {t:"Your latest post on the collab shares the TikTok post link and the spark code.",m:"Client Review · Submitted",a:"hidden",why:"That's your hand-off post, so the page treats the collab as done and hides it."}
 ];
-const QOPTS=[...GROUPS.slice(0,6).map(g=>({key:g.key,label:g.label})),{key:"hidden",label:"Hidden"}];
+const QOPTS=[...GROUPS.map(g=>({key:g.key,label:g.label})),{key:"hidden",label:"Hidden"}];
 let qi=0,score=0,answered=0;
 function renderQ(){
   const q=QUIZ[qi];

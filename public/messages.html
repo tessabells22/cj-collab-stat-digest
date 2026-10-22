@@ -163,8 +163,11 @@ function fill(keepIfEdited){
   edited=false;$("edHint").textContent=rs.length?"Edit anything before you send it.":"Tick at least one collab.";countChars();
 }
 const countChars=()=>{$("edCount").textContent=$("draft").value.length+" characters"};
-function selectCreator(name,key){
-  creator=name||orderedCreators()[0]||"";name=creator;const rs=rowsOf(name);tplKey=key&&TPL[key]?key:defaultTpl(rs);picked=pickFor(rs,tplKey);
+function selectCreator(name,key,onlyId){
+  creator=name||orderedCreators()[0]||"";name=creator;let rs=rowsOf(name);
+  /* opened from one collab in My collabs: tick just that collab and pick the template for it */
+  const one=onlyId&&rs.find(r=>r.id===String(onlyId));
+  tplKey=key&&TPL[key]?key:defaultTpl(one?[one]:rs);picked=one?new Set([one.id]):pickFor(rs,tplKey);
   renderCreatorSel();renderPicks();renderTpls();fill(false);
 }
 $("crSel").onchange=e=>{if(edited&&!confirm("Switch creator? Your edits will be replaced."))return void($("crSel").value=creator);selectCreator(e.target.value)};
@@ -208,7 +211,7 @@ $("vWrite").onclick=()=>setView("write");$("vChase").onclick=()=>setView("chase"
 function showNote(t,err){const n=$("note");n.textContent=t;n.className="note"+(err?" err":"");n.hidden=!t}
 function showGate(msg){if(window.Shell)Shell.setUser(null);$("app").hidden=true;$("gate").hidden=false;$("gateErr").textContent=msg||"";$("gateErr").hidden=!msg}
 $("signout").onclick=async()=>{try{await api("/api/auth/logout")}catch(e){}showGate("")};
-const qs=new URLSearchParams(location.search),qc=qs.get("creator"),qt=qs.get("t");
+const qs=new URLSearchParams(location.search),qc=qs.get("creator"),qt=qs.get("t"),qid=qs.get("c");
 if(qc||qt)history.replaceState(null,"",location.pathname);
 let started=false;
 /* first data: pick the creator from the link; later data (the fresh read after a saved copy) keeps
@@ -217,7 +220,7 @@ function onData(raw,meta){
   const r=groupDigest(raw);me=r.me;rows=Object.values(r.groups).flat();
   $("freshText").textContent=`${rows.length} active collabs · `+(meta.cached?`saved ${savedAgo(meta.at)}, refreshing…`:"updated "+new Date(meta.at).toLocaleTimeString("en-US",{timeZone:tz,hour:"numeric",minute:"2-digit"}));
   renderChase();
-  if(!started){started=true;selectCreator(qc&&creators()[qc]?qc:"",qt);if(qs.get("view")==="chase")setView("chase");return}
+  if(!started){started=true;selectCreator(qc&&creators()[qc]?qc:"",qt,qid);if(qs.get("view")==="chase")setView("chase");return}
   const ids=new Set(rowsOf(creator).map(r=>r.id));picked=new Set([...picked].filter(id=>ids.has(id)));
   renderCreatorSel();renderPicks();if(!edited)fill(false);
 }

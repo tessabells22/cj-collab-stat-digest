@@ -120,6 +120,7 @@ dd{margin:0;font-size:14px;overflow-wrap:anywhere;font-variant-numeric:tabular-n
 .newdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--lume);margin-right:6px;vertical-align:1px;box-shadow:0 0 0 3px rgba(63,224,164,.18)}
 .flag.seen{color:var(--lume);border-color:var(--lume)}
 .acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+a.abtn{text-decoration:none;display:inline-flex;align-items:center}
 .abtn{appearance:none;font:600 12.5px/1 var(--f-body);border-radius:999px;padding:8px 13px;background:transparent;color:var(--text);border:1px solid var(--line);cursor:pointer}
 .abtn:hover{border-color:var(--muted)}
 .abtn.ok{border-color:var(--lume);color:var(--lume)}
