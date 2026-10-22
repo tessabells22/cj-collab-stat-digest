@@ -43,6 +43,7 @@
 .num span{font-size:11.5px;color:var(--muted)}
 .num.bad b{color:var(--danger-text)}.num.warn b{color:var(--orange)}.num.zero b{color:var(--muted)}
 .clu{font-size:12.5px;color:var(--muted)}
+.clu .cl{display:block;font-size:12px;color:var(--muted);opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cnote{margin:0;font-size:12.5px;color:var(--muted)}
 .chev{width:14px;height:14px;color:var(--muted);transition:transform .15s}
 .cr[open] .chev{transform:rotate(90deg)}
@@ -130,9 +131,10 @@ function build(active,history){
   return Object.values(m).map(p=>{
     const late=p.active.filter(isLate),soon=p.active.filter(r=>{const d=daysUntil(r.deadline);return d!=null&&d>=0&&d<=3&&creatorOwes(r)});
     const withDl=p.done.filter(r=>r.deadline!=null&&r.done!=null),onTime=withDl.filter(r=>r.done<=r.deadline);
-    const lastAt=Math.max(0,...p.active.map(r=>ts(r.latest&&r.latest.at)));
+    const lastRow=p.active.reduce((b,r)=>ts(r.latest&&r.latest.at)>ts(b&&b.latest&&b.latest.at)?r:b,null);
+    const lastAt=lastRow?ts(lastRow.latest.at):0,lastBy=lastRow?lastRow.latest.by||"":"";
     p.done.sort((a,b)=>(b.done||0)-(a.done||0));
-    return{...p,clients:[...p.clients].sort(),late,soon,withDl:withDl.length,onTime:onTime.length,rate:withDl.length?onTime.length/withDl.length:null,lastAt,
+    return{...p,clients:[...p.clients].sort(),late,soon,withDl:withDl.length,onTime:onTime.length,rate:withDl.length?onTime.length/withDl.length:null,lastAt,lastBy,
       needsYou:p.active.filter(r=>r.group==="needsYou").length};
   });
 }
@@ -166,22 +168,17 @@ function render(){
         <td>${r.url?`<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.name)}</a>`:esc(r.name)}<span class="s">${esc(r.client||"")}</span></td>
         <td class="opt">${esc(r.stage)}${r.subStage?`<span class="s">${esc(r.subStage)}</span>`:""}</td>
         <td>${r.deadline?esc(shortDue(r.deadline)):""}<span class="s">${timingTag(r)}</span></td>
-        <td class="opt">${r.latest&&r.latest.at?`${esc(ago(r.latest.at))}<span class="s">${esc((r.latest.text||"").slice(0,90))}${(r.latest.text||"").length>90?"…":""}</span>`:'<span class="s">No updates</span>'}</td></tr>`).join("")}</tbody></table>`:'<p class="cnote">No active collabs right now.</p>';
-    const doneTbl=p.done.length?`<table><thead><tr><th>Collab</th><th>Delivered</th><th class="n">Result</th></tr></thead><tbody>${
-      p.done.slice(0,6).map(r=>{const d=r.done!=null?new Date(r.done*864e5).toLocaleDateString("en-US",{timeZone:"UTC",month:"short",day:"numeric"}):"";
-        const res=r.deadline==null||r.done==null?'<span class="tag">No deadline</span>':r.done<=r.deadline?'<span class="tag ok">On time</span>':`<span class="tag late">${r.done-r.deadline}d late</span>`;
-        return`<tr><td>${r.url?`<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.name)}</a>`:esc(r.name)}</td><td>${d}</td><td class="n">${res}</td></tr>`}).join("")}</tbody></table>${p.done.length>6?`<p class="cnote">+ ${p.done.length-6} earlier</p>`:""}`:'<p class="cnote">No finished collabs with you yet.</p>';
+        <td class="opt">${r.latest&&r.latest.at?`<b>${esc(r.latest.by||"Someone")}</b> · ${esc(ago(r.latest.at))}${r.latest.isReply?" · comment":""}<span class="s">${esc((r.latest.text||"").slice(0,90))}${(r.latest.text||"").length>90?"…":""}</span>`:'<span class="s">No updates</span>'}</td></tr>`).join("")}</tbody></table>`:'<p class="cnote">No active collabs right now.</p>';
     return`<details class="cr${p.late.length?" hot":""}" data-n="${esc(p.name)}"${open.has(p.name)?" open":""}>
       <summary>
         <span class="cwho"><span class="av" aria-hidden="true">${esc(initials(p.name))}</span><span><span class="cnm">${esc(p.name)}</span><span class="cl">${esc(p.clients.join(", "))}</span></span></span>
         ${num(p.active.length,"active","")}${num(p.late.length,"late","bad")}${num(p.soon.length,"due soon","warn")}
         <span class="num ${p.withDl?"":"zero"}"><b>${pct(p.onTime,p.withDl)}</b><span>${p.withDl?`${p.onTime} of ${p.withDl}`:"no history"}</span></span>
-        <span class="clu">${p.lastAt?esc(ago(new Date(p.lastAt).toISOString())):"–"}</span>
+        <span class="clu">${p.lastAt?`${esc(ago(new Date(p.lastAt).toISOString()))}${p.lastBy?`<span class="cl">${esc(p.lastBy)}</span>`:""}`:"–"}</span>
         <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
       </summary>
       <div class="det">
         <div><h4>Active collabs</h4>${activeTbl}</div>
-        <div><h4>Delivered with you</h4>${doneTbl}</div>
         <div class="acts">${p.active.length?`<a class="btn primary" href="/messages?creator=${encodeURIComponent(p.name)}${tpl?"&t="+tpl:""}">Message ${esc(first)}</a>`:""}</div>
       </div></details>`}).join("");
 }
