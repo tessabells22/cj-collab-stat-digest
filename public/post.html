@@ -195,7 +195,7 @@ function sync(){
   $("goBtn").disabled=!ok||posting;
   $("goHint").textContent=!n?"Tick at least one collab.":n>50?"Pick 50 or fewer at a time.":miss?`${miss} ticked collab${miss===1?" has":"s have"} no update to reply to. Untick ${miss===1?"it":"them"}.`:!$("text").value.trim()?(replyMode?"Write the reply.":"Write the update."):"You'll confirm before anything is posted.";
   $("preview").innerHTML=toHtml($("text").value);
-  const lt=liveTags();$("tags").hidden=!lt.length;$("tags").innerHTML=lt.length?"Tagged (they'll be notified): "+lt.map(m=>`<span>${esc(m.name)}</span>`).join(""):"";
+  const lt=liveTags();$("tags").hidden=!lt.length;$("tags").innerHTML=lt.length?"Tagged: "+lt.map(m=>`<span>${esc(m.name)}</span>`).join(""):"";
   if(!$("confirm").hidden&&!ok)$("confirm").hidden=true;
 }
 ["q","clientSel","stageSel"].forEach(id=>$(id).addEventListener("input",renderPicks));
@@ -252,7 +252,7 @@ $("tagBtn").onclick=()=>{const t=$("text"),a=t.selectionStart,v=t.value,pre=a>0&
 const byId=id=>rows.find(r=>r.id===id)||{id,name:"Collab "+id};
 $("goBtn").onclick=()=>{
   const list=[...picked].map(byId),pin=!replyMode&&$("pin").checked;
-  $("confirmText").textContent=`${replyMode?"Reply with this":"Post this update"}${pin?" and pin it":""} on ${list.length} collab${list.length===1?"":"s"}${mondayName?` as ${mondayName}`:""}? Monday.com notifies people who follow these collabs, so it can't be quietly undone.`+(liveTags().length?` ${liveTags().map(m=>m.name).join(", ")} will be tagged and notified on each one (${list.length} notification${list.length===1?"":"s"} each).`:"");
+  $("confirmText").textContent=`${replyMode?"Reply with this":"Post this update"}${pin?" and pin it":""} on ${list.length} collab${list.length===1?"":"s"}${mondayName?` as ${mondayName}`:""}? Monday.com notifies people who follow these collabs, so it can't be quietly undone.`+(liveTags().length?` ${liveTags().map(m=>m.name).join(", ")} will be tagged on each one.`:"");
   $("confirmList").innerHTML=list.map(r=>{if(!replyMode)return`<li>${esc(r.name)}</li>`;const u=updList(r.id).find(x=>String(x.id)===replyTarget(r.id));
     return`<li>${esc(r.name)}${u?` <span class="why">→ under ${esc((u.creator&&u.creator.name)||"Someone")}'s “${esc(clip(u.text_body,50))}”</span>`:""}</li>`}).join("");
   $("confirm").hidden=false;$("results").hidden=true;$("yesBtn").focus();
