@@ -23,6 +23,9 @@ const STAGE_HEX={"Canceled":"#df2f4a","Planning":"#66ccff","Creative Direction":
   "Upload":"#ff5ac4","On Hold":"#8a8a99","Approved":"#00c875","Completed":"#16a36b","Posting":"#4a8ff0","In Progress":"#fdab3d","Done":"#00c875","Stuck":"#df2f4a"};
 /* "On Hold" as the stage or any sub-stage: paused, so it isn't late, due or stuck */
 const isOnHold=(stage,sub)=>/\bon[\s-]*hold\b/i.test(`${stage||""} ${sub||""}`);
+/* The stages a CFS runs directly: Production with one of these sub-stages (Whitelisting also while the
+   main stage is Posting). Only these count toward Due today and Late; other teams own the rest. */
+const CFS_SUBS=/^(pending|whitelisting|contracting|video production)$/i;
 const YOUR_MOVE=/^(pending asset|needs clarification|revisions?|creator reassignment|contracting|product access)$/i;
 const tz="Asia/Manila";
 
@@ -102,12 +105,13 @@ function buildRow(it,updates,me){
   const ppAsset=stageName==="Post-Production"&&/^pending asset$/i.test(sub);
   const move=ppAsset?null:[sub,stageName].find(v=>YOUR_MOVE.test(v||""));
   row.onHold=isOnHold(stageName,sub);row.move=move||"";
+  row.cfsStage=(stageName==="Production"||stageName==="Posting")&&CFS_SUBS.test(cv(it,SUB.Production));
   /* on hold comes first: a paused collab never shows as late, due today or stuck (a mention still flags the row) */
   if(row.onHold){row.group="onHold";row.reason=`On hold${days!=null?` for ${days} day${days===1?"":"s"}`:""}${mentionsMe?` · ${by||"Someone"} mentioned you`:""}`}
-  /* deadlines come next, as on the board: a collab due today or late shows there even when it's also your
-     move or someone mentioned you (the row still says so) */
-  else if(dueToday&&!isCR){row.group="dueToday";row.reason="Due today"+(move?` · your move: ${move}`:"")+(mentionsMe?` · ${by||"someone"} mentioned you`:"")}
-  else if(row.overdue&&!isCR){row.group="late";row.reason=(row.daysLate?`${row.daysLate} day${row.daysLate===1?"":"s"} late`:"Less than a day late")+(move?` · your move: ${move}`:"")+(mentionsMe?` · ${by||"someone"} mentioned you`:"")}
+  /* deadlines come next, as on the board, but only in the stages the CFS runs (cfsStage): a collab due today
+     or late shows there even when it's also your move or someone mentioned you (the row still says so) */
+  else if(dueToday&&row.cfsStage){row.group="dueToday";row.reason="Due today"+(move?` · your move: ${move}`:"")+(mentionsMe?` · ${by||"someone"} mentioned you`:"")}
+  else if(row.overdue&&row.cfsStage){row.group="late";row.reason=(row.daysLate?`${row.daysLate} day${row.daysLate===1?"":"s"} late`:"Less than a day late")+(move?` · your move: ${move}`:"")+(mentionsMe?` · ${by||"someone"} mentioned you`:"")}
   else if(mentionsMe){row.group="needsYou";row.reason=`${by||"Someone"} mentioned you${p.isReply?" in a comment":""}`}
   else if(move){row.group="needsYou";row.reason=`Your move: ${move}${days!=null?`, ${days}d in stage`:""}`}
   else if(fresh||stageMoved){row.group="changed";row.reason=fresh?`New ${p.isReply?"comment":"update"} from ${by||"someone"} ${ago(p.created_at)}`:`Moved to ${stageName} today`}
@@ -184,7 +188,7 @@ function backReasonFor(handled,it){
   const since=ts(h.markedAt)||ts(h.at);
   if(it.mentionAt&&ts(it.mentionAt)>since)return`${it.mentionBy||"someone"} mentioned you`;
   const markDay=since?dayNum(new Intl.DateTimeFormat("en-CA",{timeZone:tz}).format(new Date(since))):null,due=dayNum(it.deadline);
-  if(!it.onHold&&it.stage!=="Client Review"&&markDay!=null&&due!=null){
+  if(it.cfsStage&&!it.onHold&&markDay!=null&&due!=null){
     if(it.dueToday&&markDay<due)return"it's due today";
     if(it.overdue&&markDay<=due)return"it's past its deadline";
   }

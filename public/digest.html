@@ -249,6 +249,7 @@ function rowHTML(it,showGroup){
       <div class="acts">
         <button type="button" class="abtn${done?" ok":""}" data-act="handled">${done?"✓ Handled · undo":"Mark handled"}</button>
         <button type="button" class="abtn" data-act="draft">Draft message to creator</button>
+        ${creatorNames(it.creator)[0]?`<a class="abtn" href="/messages?creator=${encodeURIComponent(creatorNames(it.creator)[0])}&c=${encodeURIComponent(it.id)}">Write in Messages →</a>`:""}
         ${it.url?`<a class="open-link" href="${esc(it.url)}" target="_blank" rel="noopener">Open in Monday.com ↗</a>`:""}
       </div>
       ${done?'<span class="hint">Hidden until the stage moves, someone @mentions you or the deadline arrives.</span>':back?`<span class="hint">You marked this handled; it came back because ${esc(back)}. Mark it again if nothing's needed.</span>`:'<span class="hint">Mark handled hides it until the stage moves, someone @mentions you or the deadline arrives.</span>'}
