@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Collab Digest Guide</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -203,7 +206,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
     <p class="sub">This is a working copy of the real page with made-up collabs. Click a group chip, then click a row to open it.</p>
     <div class="steps">
       <div class="step"><span class="newdot-demo" aria-hidden="true"></span><span><b>New since your last visit</b><p>A green dot marks collabs with a new post or stage move since you last opened the page. The <span class="kbd">New since …</span> chip lists just those.</p></span></div>
-      <div class="step"><span class="newdot-demo hand" aria-hidden="true">✓</span><span><b>Mark handled</b><p>Open a row and press <span class="kbd">Mark handled</span> once you've dealt with it. It stays hidden until the collab moves to a new stage or someone @mentions you, then comes back with a "Back:" tag saying why. Team chatter and your own posts don't bring it back. Your marks are saved in this browser only.</p></span></div>
+      <div class="step"><span class="newdot-demo hand" aria-hidden="true">✓</span><span><b>Mark handled</b><p>Open a row and press <span class="kbd">Mark handled</span> once you've dealt with it. It stays hidden until the collab moves to a new stage, someone @mentions you, or it becomes due today or late, then comes back with a "Back:" tag saying why. Team chatter and your own posts don't bring it back. Your marks are saved in this browser only.</p></span></div>
       <div class="step"><span class="newdot-demo msg" aria-hidden="true">✉</span><span><b>Draft message to creator</b><p>Opens a ready-to-edit Brkaway message based on the collab's stage, with an optional <span class="kbd">Rewrite with Claude</span>. Copy it and paste into Brkaway.</p></span></div>
       <div class="step"><span class="newdot-demo cli" aria-hidden="true">≡</span><span><b>By client view</b><p>Switch <span class="kbd">By urgency</span> to <span class="kbd">By client</span> to see collabs grouped by brand, handy when one client's batch slips together.</p></span></div>
     </div>
@@ -271,9 +274,9 @@ syncSteps();
 /* 2 demo */
 const STAGE_HEX={"Creative Direction":"#ffcb00","Production":"#9d50dd","QC - Production":"#784bd1","Post-Production":"#579bfc","QC - Post-Production":"#5a86d6","Client Review":"#9cd326","Approved":"#00c875","Planning":"#66ccff"};
 const GROUPS=[
-  {key:"needsYou",label:"Needs you",c:"var(--violet)",why:"<b>Someone @mentioned you</b> in the newest update or comment, or the collab sits in a sub-stage that's on you: Pending Asset, Needs Clarification, Revision, Creator Reassignment, Contracting or Product Access. One exception: Pending Asset in Post-Production is on the PP Manager, not you. Start here every time."},
-  {key:"dueToday",label:"Due today",c:"#F59E3B",why:"<b>Due today and not with the client.</b> These are the ones you can still save, so they get their own group."},
-  {key:"late",label:"Late",c:"var(--danger)",why:"<b>Past the deadline and not with the client</b>, worst first. Each row shows how many days late."},
+  {key:"needsYou",label:"Needs you",c:"var(--violet)",why:"<b>Someone @mentioned you</b> in the newest update or comment, or the collab sits in a sub-stage that's on you: Pending Asset, Needs Clarification, Revision, Creator Reassignment, Contracting or Product Access. One exception: Pending Asset in Post-Production is on the PP Manager, not you. Start here every time. If it's also due today or late, it shows in that group instead, with a Your move or Mentioned you tag."},
+  {key:"dueToday",label:"Due today",c:"#F59E3B",why:"<b>Due today and not with the client</b>, the same as Deadline today on the board. These come before Needs you, so nothing due today hides elsewhere; a Your move or Mentioned you tag says if it's also on you."},
+  {key:"late",label:"Late",c:"var(--danger)",why:"<b>Past the deadline and not with the client</b>, worst first. Each row shows how many days late, and a Your move or Mentioned you tag if that applies too."},
   {key:"changed",label:"Changed 24h",c:"var(--crystal)",why:"<b>Something happened in the last 24 hours:</b> a new update, a new comment on an older update, or a stage change. Client feedback on a Client Review collab lands here too."},
   {key:"waiting",label:"Waiting on client",c:"#9cd326",why:"<b>In Client Review with nothing new.</b> The ball is with the client, not you. Sorted by how long they've had it, so a weekly chase is quick."},
   {key:"stuck",label:"Stuck 5d+",c:"var(--gold)",why:"<b>Five or more days in the same stage</b> with nothing above applying. Worth a nudge to the creator or the team."},
@@ -324,7 +327,8 @@ renderDemo();
 
 /* 3 quiz */
 const QUIZ=[
-  {t:"A teammate @mentions you in a comment on a collab that is also 3 days past its deadline.",m:"Client Review · Submitted · due 3 days ago",a:"needsYou",why:"Needs you comes first. A mention beats overdue, so it shows in Needs you (and still gets the Overdue tag)."},
+  {t:"A teammate @mentions you in a comment on a collab that is also 3 days past its deadline.",m:"Client Review · Submitted · due 3 days ago",a:"needsYou",why:"It's in Client Review, so it never counts as late: the client has it. The mention puts it in Needs you."},
+  {t:"A Production collab is in Contracting and due today.",m:"Production · Contracting · due today",a:"dueToday",why:"Deadlines come before Needs you, as on the board, so it shows in Due today with a Your move: Contracting tag."},
   {t:"A collab has been in Client Review · Submitted for 9 days. No new posts, deadline is next week.",m:"9 days in stage · due next week",a:"waiting",why:"It's with the client and nothing changed today, so it goes to Waiting on client, not Stuck. The ball isn't in your court."},
   {t:"A Production collab is 4 days past its deadline. Last post was a week ago.",m:"Production · Video Production · 4 days late",a:"late",why:"Not with the client and past the deadline, so it lands in Late, sorted near the top because it's 4 days over."},
   {t:"Your collab's sub-stage is Pending Asset while it's still in Production. The deadline is in two weeks.",m:"Production · Pending Asset",a:"needsYou",why:"In Production, Pending Asset means you need to get the asset from the creator, so it lands in Needs you."},

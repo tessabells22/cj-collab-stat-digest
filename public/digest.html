@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Collab Digest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -220,6 +223,7 @@ function rowHTML(it,showGroup){
   const back=!done&&handled[it.id]?backReason(it):"";
   if(back)flags.push(`<span class="flag attn">Back: ${esc(back)}</span>`);
   if(it.mentionsMe)flags.push('<span class="flag attn">Mentioned you</span>');
+  if(it.move&&it.group!=="needsYou")flags.push(`<span class="flag attn">Your move: ${esc(it.move)}</span>`);
   if(it.overdue)flags.push(`<span class="flag late">${it.daysLate?it.daysLate+"d late":"<1d late"}</span>`);
   if(Number(it.daysInStage)>=5)flags.push(`<span class="flag stuck">${esc(it.daysInStage)}d in stage</span>`);
   if(u.at&&now-ts(u.at)<864e5)flags.push(`<span class="flag new">New ${u.isReply?"comment":"update"}</span>`);
@@ -247,7 +251,7 @@ function rowHTML(it,showGroup){
         <button type="button" class="abtn" data-act="draft">Draft message to creator</button>
         ${it.url?`<a class="open-link" href="${esc(it.url)}" target="_blank" rel="noopener">Open in Monday.com ↗</a>`:""}
       </div>
-      ${done?'<span class="hint">Hidden until the stage moves or someone @mentions you.</span>':back?`<span class="hint">You marked this handled; it came back because ${esc(back)}. Mark it again if nothing's needed.</span>`:'<span class="hint">Mark handled hides it until the stage moves or someone @mentions you.</span>'}
+      ${done?'<span class="hint">Hidden until the stage moves, someone @mentions you or the deadline arrives.</span>':back?`<span class="hint">You marked this handled; it came back because ${esc(back)}. Mark it again if nothing's needed.</span>`:'<span class="hint">Mark handled hides it until the stage moves, someone @mentions you or the deadline arrives.</span>'}
     </div>
   </details>`;
 }
@@ -294,7 +298,7 @@ function render(){
   const sa=$("seenAll");if(sa)sa.onclick=()=>{prevVisit=Date.now();if(special==="new")special=null;render()};
   /* the list */
   let pool,title,showGroup=true;
-  if(special==="handled"){pool=handledRows;title="Handled, hidden until the stage moves or you're mentioned"}
+  if(special==="handled"){pool=handledRows;title="Handled, hidden until the stage moves, you're mentioned or the deadline arrives"}
   else if(special==="new"){pool=newRows;title="New since your last visit"}
   /* search also looks through collabs marked handled (they carry a Handled tag), so nothing is unfindable */
   else if(searching){pool=all;title="Search results"+(view==="client"?" across clients":" in all groups")+(handledRows.some(matches)?", handled included":"")}

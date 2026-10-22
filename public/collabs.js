@@ -101,13 +101,15 @@ function buildRow(it,updates,me){
   /* In Post-Production a Pending Asset comes from the PP Manager, not the CFS */
   const ppAsset=stageName==="Post-Production"&&/^pending asset$/i.test(sub);
   const move=ppAsset?null:[sub,stageName].find(v=>YOUR_MOVE.test(v||""));
-  row.onHold=isOnHold(stageName,sub);
+  row.onHold=isOnHold(stageName,sub);row.move=move||"";
   /* on hold comes first: a paused collab never shows as late, due today or stuck (a mention still flags the row) */
   if(row.onHold){row.group="onHold";row.reason=`On hold${days!=null?` for ${days} day${days===1?"":"s"}`:""}${mentionsMe?` · ${by||"Someone"} mentioned you`:""}`}
+  /* deadlines come next, as on the board: a collab due today or late shows there even when it's also your
+     move or someone mentioned you (the row still says so) */
+  else if(dueToday&&!isCR){row.group="dueToday";row.reason="Due today"+(move?` · your move: ${move}`:"")+(mentionsMe?` · ${by||"someone"} mentioned you`:"")}
+  else if(row.overdue&&!isCR){row.group="late";row.reason=(row.daysLate?`${row.daysLate} day${row.daysLate===1?"":"s"} late`:"Less than a day late")+(move?` · your move: ${move}`:"")+(mentionsMe?` · ${by||"someone"} mentioned you`:"")}
   else if(mentionsMe){row.group="needsYou";row.reason=`${by||"Someone"} mentioned you${p.isReply?" in a comment":""}`}
   else if(move){row.group="needsYou";row.reason=`Your move: ${move}${days!=null?`, ${days}d in stage`:""}`}
-  else if(dueToday&&!isCR){row.group="dueToday";row.reason="Due today: still time to save it"}
-  else if(row.overdue&&!isCR){row.group="late";row.reason=row.daysLate?`${row.daysLate} day${row.daysLate===1?"":"s"} late`:"Less than a day late"}
   else if(fresh||stageMoved){row.group="changed";row.reason=fresh?`New ${p.isReply?"comment":"update"} from ${by||"someone"} ${ago(p.created_at)}`:`Moved to ${stageName} today`}
   else if(isCR){row.group="waiting";row.reason=`Waiting on the client${days!=null?` for ${days} day${days===1?"":"s"}`:""}${row.overdue?`, ${row.daysLate}d past deadline`:""}`}
   else if(days!=null&&days>=5){row.group="stuck";row.reason=ppAsset?`Waiting on the PP Manager for the asset, ${days} days`:`${days} days in ${stageName}${sub?` · ${sub}`:""}`}
@@ -172,13 +174,20 @@ async function swr(kind,loader,render){
 }
 
 /* ---------- handled marks (saved per browser under cd.handled) ---------- */
-/* A mark holds until the main stage moves or someone @mentions you after you marked it. */
+/* A mark holds until the main stage moves, someone @mentions you after you marked it, or its deadline arrives. */
 function readHandled(){try{return JSON.parse(localStorage.getItem("cd.handled")||"{}")||{}}catch(e){return{}}}
+/* A mark also gives way when the deadline arrives: due today (marked before today) or late (marked on or
+   before the deadline day). Deadlines never stay hidden behind an older mark. */
 function backReasonFor(handled,it){
   const h=handled[it.id];if(!h)return"";
   if(h.stage!==it.stage)return`moved to ${it.stage}`;
   const since=ts(h.markedAt)||ts(h.at);
   if(it.mentionAt&&ts(it.mentionAt)>since)return`${it.mentionBy||"someone"} mentioned you`;
+  const markDay=since?dayNum(new Intl.DateTimeFormat("en-CA",{timeZone:tz}).format(new Date(since))):null,due=dayNum(it.deadline);
+  if(!it.onHold&&it.stage!=="Client Review"&&markDay!=null&&due!=null){
+    if(it.dueToday&&markDay<due)return"it's due today";
+    if(it.overdue&&markDay<=due)return"it's past its deadline";
+  }
   return"";
 }
 function isHandledIn(handled,it){return!!handled[it.id]&&!backReasonFor(handled,it)}
