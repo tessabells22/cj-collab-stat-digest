@@ -16,7 +16,7 @@
 /* Team meeting: the JetCrew syncs (Mon / Wed / Fri). Pick a crew and the page lays out your
    collabs for that crew's PM as an agenda: since the last meeting, late, due before the next one,
    blockers, waiting on the client. Present hides the app chrome for screen sharing. */
-.wrap{max-width:1120px;gap:22px}
+.wrap{gap:22px}
 .crews{display:flex;gap:8px;flex-wrap:wrap}
 .crew{appearance:none;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px 16px;border-radius:14px;border:1px solid var(--line);background:var(--deck);color:var(--text);cursor:pointer;font:inherit;min-width:170px}
 .crew b{font:600 15px/1.2 var(--f-display)}
@@ -63,7 +63,7 @@
 /* present: no sidebar or top bar, bigger type, for sharing your screen */
 body.present .side,body.present .topbar,body.present .scrim,body.present .no-present{display:none!important}
 body.present .shell{grid-template-columns:minmax(0,1fr)!important}
-body.present .wrap{max-width:1280px}
+
 body.present .page-head h1{font-size:clamp(30px,4vw,46px)}
 body.present .it .mnm{font-size:15px}
 body.present .it .mst,body.present .it .mup,body.present .it .mcr{font-size:15px}

@@ -12,92 +12,6 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="/app.css">
 <link rel="stylesheet" href="/shell.css">
-<style>
-/* My collabs as an inbox: the list of collabs on the left (groups, search, sort), the selected collab on
-   the right with its update thread and a reply box. Phones show one pane at a time. */
-.wrap{max-width:1440px;gap:16px}
-.inbox{display:grid;grid-template-columns:minmax(330px,420px) minmax(0,1fr);gap:0;background:var(--deck);border:1px solid var(--line);border-radius:18px;overflow:hidden;height:calc(100dvh - 290px);min-height:520px}
-.lpane{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line)}
-.lhead{display:flex;flex-direction:column;gap:10px;padding:14px;border-bottom:1px solid var(--line)}
-.lhead .tally{gap:6px}
-.lhead .fchip{padding:6px 10px;font-size:12.5px}
-.lhead .tools{gap:6px}
-.lhead .tools input{flex:1 1 100%}
-.lhead .tools select{flex:1 1 0;min-width:0}
-.lbar{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:10px 14px 6px}
-.lbar h2{margin:0;font:600 14px/1.2 var(--f-display)}
-.lbar .count{font:500 11.5px var(--f-mono);color:var(--muted)}
-.ilist{flex:1;overflow:auto;min-height:0}
-.irow{display:flex;flex-direction:column;gap:5px;padding:12px 14px 12px 17px;border-bottom:1px solid var(--line);cursor:pointer;position:relative;outline:none}
-.irow::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--stage,var(--line))}
-.irow:hover{background:var(--deck-2)}
-.irow[aria-selected="true"]{background:rgba(124,92,252,.12)}
-.irow:focus-visible{box-shadow:inset 0 0 0 2px var(--violet)}
-.irow .l1{display:flex;align-items:baseline;gap:8px;min-width:0}
-.irow .nm{flex:1;min-width:0;font:500 13px/1.3 var(--f-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.irow .when{font-size:11.5px;color:var(--muted);white-space:nowrap}
-.irow .pv{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.irow .pv b{color:var(--text);font-weight:600}
-.irow .l3{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
-.irow .newdot{width:7px;height:7px;border-radius:50%;background:var(--lume);flex:none;align-self:center}
-.mini{font:600 10.5px/1 var(--f-body);padding:4px 7px;border-radius:999px;white-space:nowrap;border:1px solid var(--line);color:var(--muted)}
-.mini.stage{color:#0B0F1F;background:var(--pc,#c4c4c4);border-color:transparent}
-.mini.late{color:var(--danger-text);border-color:var(--danger)}.mini.today{color:var(--orange);border-color:var(--orange)}
-.mini.attn{color:var(--violet);border-color:var(--violet);background:rgba(124,92,252,.10)}
-.mini.seen{color:var(--lume);border-color:var(--lume)}.mini.stuck{color:var(--gold);border-color:var(--gold-line)}
-.chead{padding:10px 14px 6px;font:600 10.5px/1.2 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;background:var(--ink)}
-.more{margin:12px 14px}
-.lempty{padding:28px 18px;color:var(--muted);font-size:13.5px}
-.lempty h3{margin:0 0 4px;color:var(--text);font:600 15px/1.3 var(--f-display)}
-.rpane{display:flex;flex-direction:column;min-height:0;min-width:0}
-.rhead{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
-.rtop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
-.rtop h2{margin:0;font:600 17px/1.3 var(--f-mono);overflow-wrap:anywhere}
-.rtop .cr{font-size:13px;color:var(--muted);margin-top:3px}
-.ract{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.ract .open-link{align-self:center}
-.meta{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted);align-items:center}
-.meta b{color:var(--text);font-weight:600}
-.meta .late{color:var(--danger-text);font-weight:600}.meta .today{color:var(--orange);font-weight:600}
-.why2{font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px}
-.why2 i{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
-.back{display:none}
-.thread{flex:1;overflow:auto;min-height:0;padding:16px 18px;display:flex;flex-direction:column;gap:14px}
-.msg{display:grid;grid-template-columns:32px minmax(0,1fr);gap:10px}
-.msg .av{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font:600 11.5px var(--f-body);color:#fff;background:linear-gradient(135deg,var(--violet),var(--crystal))}
-.msg.mine .av{background:var(--deck-2);color:var(--text);border:1px solid var(--line)}
-.msg .who{font-size:12.5px;color:var(--muted)}
-.msg .who b{color:var(--text);font-weight:600;margin-right:6px}
-.bubble{margin-top:4px;background:var(--ink);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.55;overflow-wrap:anywhere;white-space:normal}
-.msg.mine .bubble{background:rgba(124,92,252,.10);border-color:rgba(124,92,252,.35)}
-.bubble a{color:var(--crystal)}
-.bubble .me{color:var(--violet);font-weight:600}
-.replies{margin:8px 0 0 0;padding-left:12px;border-left:2px solid var(--line);display:flex;flex-direction:column;gap:10px}
-.replies .msg{grid-template-columns:26px minmax(0,1fr)}
-.replies .av{width:26px;height:26px;font-size:10px}
-.daysep{align-self:center;font-size:11.5px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
-.tnote{font-size:12px;color:var(--muted);text-align:center}
-.compose{border-top:1px solid var(--line);padding:12px 18px 14px;display:flex;flex-direction:column;gap:8px}
-.compose .crow{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
-.compose textarea{width:100%;min-height:70px;max-height:220px;resize:vertical;background:var(--ink);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:13.5px/1.5 var(--f-body)}
-.compose .hint{font-size:12px;color:var(--muted)}
-.compose .modes{display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:var(--ink);border:1px solid var(--line)}
-.compose .modes button{appearance:none;border:0;padding:6px 10px;font:600 12px/1 var(--f-body);border-radius:999px;background:transparent;color:var(--muted);cursor:pointer}
-.compose .modes button[aria-pressed="true"]{background:var(--deck-2);color:var(--text)}
-.dbox{border-top:1px solid var(--line);padding:12px 18px;display:flex;flex-direction:column;gap:8px;background:var(--ink)}
-.dbox textarea{width:100%;min-height:120px;resize:vertical;background:var(--deck);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:13.5px/1.5 var(--f-body)}
-.rempty{flex:1;display:grid;place-items:center;color:var(--muted);font-size:14px;padding:24px;text-align:center}
-.kbd{font:500 11px var(--f-mono);border:1px solid var(--line);border-radius:5px;padding:1px 5px}
-@media (max-width:960px){
-  .inbox{grid-template-columns:minmax(0,1fr);height:auto;min-height:0}
-  .lpane{border-right:0}
-  .ilist{max-height:none;overflow:visible}
-  .inbox.reading .lpane{display:none}
-  .inbox:not(.reading) .rpane{display:none}
-  .back{display:inline-flex}
-  .thread{max-height:none;overflow:visible}
-}
-</style>
 </head>
 <body data-page="digest" data-crumb="My collabs" data-auth="required">
 <div class="shell" id="app" hidden>
@@ -110,58 +24,39 @@
     <div>
       <span class="eyebrow">My collabs · Production board</span>
       <h1>What needs <span id="who">you</span> on <em>Production</em>?</h1>
-      <p class="lede"><span class="fresh" id="fresh"><i></i><span id="freshText">Connecting to Monday.com…</span></span><span>Live from Monday.com, refreshed every 5 minutes. <span class="kbd">j</span> / <span class="kbd">k</span> move through the list.</span></p>
+      <p class="lede"><span class="fresh" id="fresh"><i></i><span id="freshText">Connecting to Monday.com…</span></span><span>Live from Monday.com, refreshed every 5 minutes. Finished, handed-off and not-started collabs are left out.</span></p>
     </div>
     <div class="head-actions"><a class="btn" href="/post">Post to several</a><button type="button" class="btn primary" id="refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>Refresh</button></div>
   </header>
-  <div class="note" id="note" hidden></div>
 
-  <section class="inbox" id="inbox">
-    <div class="lpane">
-      <div class="lhead">
-        <div class="seg" role="group" aria-label="View"><button type="button" id="vUrg" aria-pressed="true">By urgency</button><button type="button" id="vCli" aria-pressed="false">By client</button></div>
-        <div class="tally" id="tabs" role="tablist"></div>
-        <div class="extras" id="extras"></div>
-        <div class="tools">
-          <input id="q" type="search" placeholder="Search: collab, creator or update" aria-label="Search all collabs">
-          <select id="stageSel" aria-label="Filter by stage"><option value="">All stages</option></select>
-          <select id="sortSel" aria-label="Sort">
-            <option value="priority">Most urgent first</option>
-            <option value="deadline">Deadline, soonest</option>
-            <option value="days">Days in stage, longest</option>
-            <option value="recent">Latest update, newest</option>
-          </select>
-        </div>
-      </div>
-      <div class="lbar"><h2 id="rtitle">Needs you</h2><span class="count" id="count"></span></div>
-      <div class="ilist" id="main" role="listbox" aria-label="Collabs" tabindex="0">
-        <div class="lempty"><h3>Loading your collabs</h3>Reading the Production board items where you're the CFS. The first load takes a few seconds; refreshes after that are quick.</div>
-      </div>
+  <section class="panel" aria-label="Filters">
+    <div class="toprow">
+      <div class="seg" role="group" aria-label="View"><button type="button" id="vUrg" aria-pressed="true">By urgency</button><button type="button" id="vCli" aria-pressed="false">By client</button></div>
     </div>
+    <div class="tally" id="tabs" role="tablist"></div>
+    <div class="extras" id="extras"></div>
+    <div class="tools">
+      <input id="q" type="search" placeholder="Search all groups: collab, creator or update" aria-label="Search all collabs">
+      <select id="stageSel" aria-label="Filter by stage"><option value="">All stages</option></select>
+      <select id="sortSel" aria-label="Sort">
+        <option value="priority">Most urgent first</option>
+        <option value="deadline">Deadline, soonest</option>
+        <option value="days">Days in stage, longest</option>
+        <option value="recent">Latest update, newest</option>
+      </select>
+    </div>
+    <div class="note" id="note" hidden></div>
+  </section>
 
-    <div class="rpane" id="rpane" aria-live="polite">
-      <div class="rempty" id="rempty">Pick a collab on the left to see its updates.</div>
-      <div id="rbody" hidden style="display:contents">
-        <div class="rhead" id="rhead"></div>
-        <div class="thread" id="thread"></div>
-        <div class="dbox" id="dbox" hidden>
-          <div class="crow"><b style="font-size:13px">Message to creator (Brkaway)</b><button type="button" class="linkbtn" id="dclose">Close</button></div>
-          <textarea id="dtext" aria-label="Message to the creator"></textarea>
-          <div class="acts"><button type="button" class="abtn" id="dcopy">Copy message</button><button type="button" class="abtn" id="dai" hidden>Rewrite with Claude</button><a class="abtn" id="dmsg" href="/messages">Open in Messages →</a><span class="hint" id="dhint"></span></div>
-        </div>
-        <div class="compose">
-          <div class="crow">
-            <div class="modes" role="group" aria-label="Post as"><button type="button" id="mReply" aria-pressed="true">Reply to latest update</button><button type="button" id="mNew" aria-pressed="false">New update</button></div>
-            <span class="hint" id="chint"></span>
-          </div>
-          <textarea id="ctext" placeholder="Write a reply… (**bold** works; posts to Monday.com under your name)" aria-label="Reply"></textarea>
-          <div class="crow"><span class="hint">Ctrl+Enter to send. To tag people or post on several collabs, use <a href="/post">Post update</a>.</span><button type="button" class="abtn" id="csend" style="background:linear-gradient(135deg,var(--violet),#5B3FE0);color:#fff;border-color:transparent">Send</button></div>
-        </div>
-      </div>
+  <section class="results-wrap" aria-live="polite">
+    <div class="bar"><h2 id="rtitle">Needs you</h2><span class="count" id="count"></span></div>
+    <div class="colhead" id="colhead" aria-hidden="true"><span>Collab · creator</span><span>Stage</span><span>Deadline</span><span>Last update or comment</span><span></span></div>
+    <div class="results" id="main">
+      <div class="empty"><h3>Loading your collabs</h3><p>Reading the Production board items where you're the CFS. The first load takes a few seconds; refreshes after that are quick.</p></div>
     </div>
   </section>
 
-  <footer id="foot">Each person sees only the collabs where they are the CFS.</footer>
+  <footer id="foot">Each person sees only the collabs where they are the CFS. Nothing is changed in Monday from this page.</footer>
 </div>
 </main>
 </div>
@@ -172,27 +67,24 @@
 <script>
 const REFRESH_MS=5*60*1000;
 
-const PAGE=40;
+const PAGE=25;
 const $=id=>document.getElementById(id);
 const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 let current=null,tab=store.get("cd.tab")||"needsYou",query="",stage="",sort=store.get("cd.sort")||"priority",limit=PAGE;
 let ready=false,me=null,lastAt=0,busy=false,aiOn=false;
 let view=store.get("cd.view")||"urgency",clientTab="all",special=null;
-/* the collab open on the right, the list as last drawn, and unsent replies per collab */
-let selId=null,shown=[],replyMode="reply";const drafts={},dmsgs={};
 /* 2. new since last visit: the previous visit's time, fixed for this session */
 let prevVisit=Number(store.get("cd.lastVisit"))||0;
 /* 3. handled marks: id -> {at, stage, sub}; back automatically when the collab changes */
 let handled={};try{handled=JSON.parse(store.get("cd.handled")||"{}")||{}}catch(e){handled={}}
-/* last raw read ({me, items, updates}); earlyP is the first read, started before the sign-in check
-   returns; savedAt marks a saved copy on screen. */
+/* last raw read ({me, items, updates}); refreshes only re-read updates for items that changed since.
+   earlyP is the first read, started before the sign-in check returns; savedAt marks a saved copy on screen. */
 let rawDigest=null,earlyP=null,savedAt=0;
 $("sortSel").value=sort;
-{const q=new URLSearchParams(location.search),qTab=q.get("tab"),qId=q.get("id");
- if(GROUPS.some(g=>g.key===qTab)){tab=qTab;view="urgency";store.set("cd.tab",tab);store.set("cd.view",view)}
- if(qId)selId=qId;
- if(qTab||qId)history.replaceState(null,"",location.pathname)}
-const narrow=()=>matchMedia("(max-width:960px)").matches;
+{const qTab=new URLSearchParams(location.search).get("tab");
+ if(GROUPS.some(g=>g.key===qTab)){tab=qTab;view="urgency";store.set("cd.tab",tab);store.set("cd.view",view);history.replaceState(null,"",location.pathname)}}
+
+
 
 /* ---------- loading ---------- */
 async function handleList(fresh){
@@ -205,9 +97,10 @@ function applyRaw(raw){
   const r=groupDigest(raw);
   me=r.me||me;
   if(me&&me.name)$("who").textContent=me.name.split(" ")[0];
-  current={groups:r.groups,dropped:r.dropped,note:""};
+  const groups=r.groups;
+  current={groups,dropped:r.dropped,note:""};
   /* forget handled marks for collabs that left the list */
-  const ids=new Set(Object.values(r.groups).flat().map(r=>r.id));let pruned=false;
+  const ids=new Set(Object.values(groups).flat().map(r=>r.id));let pruned=false;
   Object.keys(handled).forEach(id=>{if(!ids.has(id)){delete handled[id];pruned=true}});if(pruned)saveHandled();
   showNote("");setFresh();render();
 }
@@ -228,7 +121,7 @@ const SIGNED_OUT=["not_signed_in"];
 const BLOCKING=["monday_not_connected","monday_token","not_configured"];
 function onError(e){
   if(SIGNED_OUT.includes(e&&e.code)){showSignIn(errCopy(e));return}
-  if(BLOCKING.includes(e&&e.code)&&!current){$("main").innerHTML=`<div class="lempty"><h3>Can't load your collabs</h3>${esc(errCopy(e))}</div>`;$("tabs").innerHTML="";$("count").textContent=""}
+  if(BLOCKING.includes(e&&e.code)&&!current){$("main").innerHTML=`<div class="empty"><h3>Can't load your collabs</h3><p>${esc(errCopy(e))}</p></div>`;$("tabs").innerHTML="";$("count").textContent=""}
   showNote(errCopy(e),true);setFresh();
 }
 
@@ -246,30 +139,29 @@ async function refresh(manual){
   }catch(e){onError(e)}
   finally{busy=false;b.disabled=false;b.classList.remove("spin");setFresh()}
 }
-$("refresh").onclick=()=>refresh(true);
+function manualRefresh(){refresh(true)}
+$("refresh").onclick=manualRefresh;
 
 /* ---------- handled marks (3) ---------- */
-/* A mark holds until the main stage moves, someone @mentions you after you marked it, or its deadline arrives.
+/* A mark holds until the main stage moves or someone @mentions you after you marked it.
    Team chatter, your own posts and sub-stage changes inside the same stage don't bring it back. */
 function markKey(it){return{at:(it.latest&&it.latest.at)||"",stage:it.stage,sub:it.subStage}}
 function backReason(it){return backReasonFor(handled,it)}
 function isHandled(it){return isHandledIn(handled,it)}
-function saveHandled(){store.set("cd.handled",JSON.stringify(handled))}
+function saveHandled(){
+  store.set("cd.handled",JSON.stringify(handled));
+}
 function toggleHandled(id){
   const it=allRows().find(r=>r.id===id);if(!it)return;
-  const wasHandled=isHandled(it);
-  if(wasHandled)delete handled[id];else handled[id]={...markKey(it),markedAt:new Date().toISOString()};
-  saveHandled();
-  /* marking one handled moves on to the next collab in the list, like archiving in an inbox */
-  if(!wasHandled&&!special&&!query){const i=shown.findIndex(r=>r.id===id);const nxt=shown[i+1]||shown[i-1];selId=nxt?nxt.id:null}
-  render();
+  if(isHandled(it))delete handled[id];else handled[id]={...markKey(it),markedAt:new Date().toISOString()};
+  saveHandled();render();
 }
 /* ---------- new since last visit (2) ---------- */
 function isNew(it){
   if(!prevVisit)return false;
   return ts(it.latest&&it.latest.at)>prevVisit||(!!it.stageStart&&ts(it.stageStart+"T00:00:00+08:00")>prevVisit);
 }
-/* ---------- creator message draft (quick copy) ---------- */
+/* ---------- creator message draft (quick win) ---------- */
 function draftMessage(it){
   const first=(it.creator||"").split(/\s+/)[0]||"there",name=it.name,due=it.deadline?fmtDue(it.deadline):"";
   const s=`${it.subStage} ${it.stage}`;let msg;
@@ -281,8 +173,25 @@ function draftMessage(it){
   if(it.overdue&&!/Client Review/.test(it.stage))msg+=`\n\nJust a heads-up that we're now past the${due?` ${due}`:""} deadline, so please send everything over as soon as you can. 🙏`;
   return msg;
 }
+async function copyText(text,btn,label){
+  try{await navigator.clipboard.writeText(text);btn.textContent="Copied";setTimeout(()=>btn.textContent=label,1500)}
+  catch(e){const ta=btn.closest(".draft").querySelector("textarea");ta.focus();ta.select();btn.textContent="Press Ctrl+C";setTimeout(()=>btn.textContent=label,2500)}
+}
+async function aiRewrite(it,ta,btn,hint){
+  if(!aiOn)return;
+  btn.disabled=true;hint.textContent="Claude is writing…";
+  const u=it.latest||{};
+  try{
+    const {text}=await api("/api/rewrite",{name:it.name,creator:it.creator,stage:it.stage,subStage:it.subStage,deadline:it.deadline,delays:it.delays,
+      latestAt:u.at?fmtWhen(u.at):"",latestText:u.text||"",draft:ta.value});
+    ta.value=text;hint.textContent="Check it before sending.";
+  }catch(e){
+    hint.textContent=(e&&e.message&&e.code!=="internal"&&e.code!=="server_unavailable")?e.message:"Claude couldn't write this one. The template still works.";
+    if(SIGNED_OUT.includes(e&&e.code))showSignIn(errCopy(e));
+  }finally{btn.disabled=false}
+}
 
-/* ---------- list ---------- */
+/* ---------- view ---------- */
 function items(key){return(current&&current.groups&&current.groups[key])||[]}
 function allRows(){return GROUPS.flatMap(g=>items(g.key))}
 const GROUP_OF=Object.fromEntries(GROUPS.map(g=>[g.key,g]));
@@ -303,24 +212,59 @@ function sorted(list){
   }
   return a;
 }
-const timingCls=it=>it.overdue?"late":it.dueToday?"today":"";
-function tagsFor(it,showGroup){
-  const t=[],grp=GROUP_OF[it.group],done=isHandled(it),back=!done&&handled[it.id]?backReason(it):"";
-  if(showGroup&&grp)t.push(`<span class="mini" style="color:${grp.c};border-color:${grp.c}">${esc(grp.label)}</span>`);
-  if(done)t.push('<span class="mini seen">Handled</span>');
-  if(back)t.push(`<span class="mini attn">Back: ${esc(back)}</span>`);
-  if(it.mentionsMe)t.push('<span class="mini attn">Mentioned you</span>');
-  if(it.move&&it.group!=="needsYou")t.push(`<span class="mini attn">Your move: ${esc(it.move)}</span>`);
-  if(Number(it.daysInStage)>=5)t.push(`<span class="mini stuck">${esc(it.daysInStage)}d in stage</span>`);
-  return t.join("");
-}
 function rowHTML(it,showGroup){
-  const hex=STAGE_HEX[it.stage]||"#8C93B4",u=it.latest||{},cls=timingCls(it);
-  return`<div class="irow" role="option" tabindex="-1" data-id="${esc(it.id)}" aria-selected="${it.id===selId}" style="--stage:${hex}">
-    <div class="l1">${isNew(it)?'<i class="newdot" title="New since your last visit"></i>':""}<span class="nm" title="${esc(it.name)}">${esc(it.name)}</span><span class="when">${u.at?esc(ago(u.at)):""}</span></div>
-    <div class="pv">${u.text?`<b>${esc(u.by||"Someone")}:</b> ${esc(u.text)}`:esc(it.creator||"No creator")+" · no updates yet"}</div>
-    <div class="l3"><span class="mini stage" style="--pc:${hex}">${esc(it.stage)}${it.subStage?` · ${esc(it.subStage)}`:""}</span>${it.deadline?`<span class="mini ${cls}">${esc(it.delays||fmtDue(it.deadline))}</span>`:""}${tagsFor(it,showGroup)}</div>
-  </div>`;
+  const hex=STAGE_HEX[it.stage]||"#8C93B4",u=it.latest||{},grp=GROUP_OF[it.group];
+  const d=dueDate(it.deadline),now=Date.now();
+  const timing=it.overdue?"late":it.dueToday?"today":"";
+  const done=isHandled(it),fresh=isNew(it);
+  const flags=[];
+  if(showGroup&&grp)flags.push(`<span class="flag" style="color:${grp.c};border-color:${grp.c}">${esc(grp.label)}</span>`);
+  if(done)flags.push('<span class="flag seen">Handled</span>');
+  const back=!done&&handled[it.id]?backReason(it):"";
+  if(back)flags.push(`<span class="flag attn">Back: ${esc(back)}</span>`);
+  if(it.mentionsMe)flags.push('<span class="flag attn">Mentioned you</span>');
+  if(it.move&&it.group!=="needsYou")flags.push(`<span class="flag attn">Your move: ${esc(it.move)}</span>`);
+  if(it.overdue)flags.push(`<span class="flag late">${it.daysLate?it.daysLate+"d late":"<1d late"}</span>`);
+  if(Number(it.daysInStage)>=5)flags.push(`<span class="flag stuck">${esc(it.daysInStage)}d in stage</span>`);
+  if(u.at&&now-ts(u.at)<864e5)flags.push(`<span class="flag new">New ${u.isReply?"comment":"update"}</span>`);
+  const facts=[["Client",it.client],["Days in stage",it.daysInStage==null?"":String(it.daysInStage)],["Timing",it.delays]].filter(x=>x[1]);
+  return `<details class="row" data-id="${esc(it.id)}" style="--stage:${hex}">
+    <summary>
+      <span class="who"><span class="nm" title="${esc(it.name)}">${fresh?'<i class="newdot" title="New since your last visit"></i>':""}<i class="dot ${timing}"></i>${esc(it.name)}</span><span class="cr">${esc(it.creator||"No creator")}</span></span>
+      <span class="st"><span class="pill" style="--pc:${hex}">${esc(it.stage)}</span>${it.subStage?`<span class="sub">${esc(it.subStage)}</span>`:""}</span>
+      <span class="dl">${it.deadline?`<span>${esc(fmtDue(it.deadline))}</span>`:'<span class="dim">No deadline</span>'}${it.delays?`<span class="sub">${esc(it.delays)}</span>`:""}</span>
+      <span class="lu">${u.at?`<span>${esc(ago(u.at))}</span><span class="sub">${esc(u.by||"")}${u.isReply?" · comment":""}</span>`:'<span class="dim">No updates</span>'}</span>
+      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+      ${flags.length?`<span class="flags">${flags.join("")}</span>`:""}
+    </summary>
+    <div class="det">
+      ${it.reason?`<div class="why">${esc(it.reason)}</div>`:""}
+      ${facts.length?`<dl>${facts.map(x=>`<div><dt>${esc(x[0])}</dt><dd>${esc(x[1])}</dd></div>`).join("")}</dl>`:""}
+      ${u.text?`<div class="upd"><div class="meta"><b>${u.isReply?"Latest comment":"Latest update"}</b><span>${esc(u.by||"Someone")}</span><span>${esc(fmtWhen(u.at))} · ${esc(ago(u.at))}</span>${u.isReply&&u.replyTo?`<span>on ${esc(u.replyTo)}'s update</span>`:""}</div><div class="body">${esc(u.text)}</div></div>`:""}
+      <div class="draft" hidden>
+        <label class="lbl" for="draft-${esc(it.id)}">Message to creator (Brkaway)</label>
+        <textarea id="draft-${esc(it.id)}" rows="6"></textarea>
+        <div class="acts"><button type="button" class="abtn" data-act="copy">Copy message</button>${aiOn?'<button type="button" class="abtn" data-act="ai">Rewrite with Claude</button>':""}<span class="hint"></span></div>
+      </div>
+      <div class="acts">
+        <button type="button" class="abtn${done?" ok":""}" data-act="handled">${done?"✓ Handled · undo":"Mark handled"}</button>
+        <button type="button" class="abtn" data-act="draft">Draft message to creator</button>
+        ${creatorNames(it.creator)[0]?`<a class="abtn" href="/messages?creator=${encodeURIComponent(creatorNames(it.creator)[0])}&c=${encodeURIComponent(it.id)}">Write in Messages →</a>`:""}
+        ${it.url?`<a class="open-link" href="${esc(it.url)}" target="_blank" rel="noopener">Open in Monday.com ↗</a>`:""}
+      </div>
+      ${done?'<span class="hint">Hidden until the stage moves, someone @mentions you or the deadline arrives.</span>':back?`<span class="hint">You marked this handled; it came back because ${esc(back)}. Mark it again if nothing's needed.</span>`:'<span class="hint">Mark handled hides it until the stage moves, someone @mentions you or the deadline arrives.</span>'}
+    </div>
+  </details>`;
+}
+function wireRows(main){
+  main.querySelectorAll("details.row").forEach(det=>{
+    const it=allRows().find(r=>r.id===det.dataset.id);if(!it)return;
+    const box=det.querySelector(".draft"),ta=box.querySelector("textarea"),hint=box.querySelector(".hint");
+    det.querySelector('[data-act="handled"]').onclick=()=>toggleHandled(it.id);
+    det.querySelector('[data-act="draft"]').onclick=()=>{ta.value=ta.value||draftMessage(it);box.hidden=false;ta.focus()};
+    box.querySelector('[data-act="copy"]').onclick=ev=>copyText(ta.value,ev.currentTarget,"Copy message");
+    const ai=box.querySelector('[data-act="ai"]');if(ai)ai.onclick=()=>aiRewrite(it,ta,ai,hint);
+  });
 }
 function setView(v){view=v;store.set("cd.view",v);$("vUrg").setAttribute("aria-pressed",v==="urgency");$("vCli").setAttribute("aria-pressed",v==="client");limit=PAGE;render()}
 $("vUrg").onclick=()=>setView("urgency");$("vCli").onclick=()=>setView("client");
@@ -336,7 +280,7 @@ function render(){
     if(!counts[tab]&&!store.get("cd.tab")){const f=GROUPS.find(g=>counts[g.key]);if(f)tab=f.key}
     $("tabs").innerHTML=GROUPS.map(g=>{const on=!searching&&!special&&tab===g.key;
       return `<button class="fchip${on?" on":""}${counts[g.key]?"":" zero"}" role="tab" aria-selected="${on}" data-k="${g.key}"><i style="background:${g.c}"></i>${g.label} <b>${counts[g.key]}</b></button>`}).join("");
-    $("tabs").querySelectorAll(".fchip").forEach(b=>b.onclick=()=>{tab=b.dataset.k;special=null;limit=PAGE;store.set("cd.tab",tab);if(query){query="";$("q").value=""}selId=null;render()});
+    $("tabs").querySelectorAll(".fchip").forEach(b=>b.onclick=()=>{tab=b.dataset.k;special=null;limit=PAGE;store.set("cd.tab",tab);if(query){query="";$("q").value=""}render()});
   }else{
     const byClient={};(searching?all:active).forEach(r=>{if(!searching||matches(r))byClient[r.client]=(byClient[r.client]||0)+1});
     const names=Object.keys(byClient).sort((a,b)=>byClient[b]-byClient[a]||a.localeCompare(b));
@@ -344,21 +288,21 @@ function render(){
     const total=Object.values(byClient).reduce((a,b)=>a+b,0);
     $("tabs").innerHTML=`<button class="fchip${clientTab==="all"&&!special?" on":""}" data-c="all">All clients <b>${total}</b></button>`+
       names.map(n=>`<button class="fchip${clientTab===n&&!special?" on":""}" data-c="${esc(n)}">${esc(n)} <b>${byClient[n]}</b></button>`).join("");
-    $("tabs").querySelectorAll(".fchip").forEach(b=>b.onclick=()=>{clientTab=b.dataset.c;special=null;limit=PAGE;selId=null;render()});
+    $("tabs").querySelectorAll(".fchip").forEach(b=>b.onclick=()=>{clientTab=b.dataset.c;special=null;limit=PAGE;render()});
   }
   /* extras: new since last visit, handled */
   const since=prevVisit?new Date(prevVisit).toLocaleString("en-US",{timeZone:tz,month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):"";
   $("extras").innerHTML=(prevVisit?`<button class="xchip new${special==="new"?" on":""}" data-x="new"><i></i>New since ${esc(since)} <b>${newRows.length}</b></button>`:"")+
     (handledRows.length||special==="handled"?`<button class="xchip${special==="handled"?" on":""}" data-x="handled">Handled <b>${handledRows.length}</b></button>`:"")+
     (prevVisit&&newRows.length?`<button class="linkbtn" id="seenAll">Mark all as seen</button>`:"");
-  $("extras").querySelectorAll(".xchip").forEach(b=>b.onclick=()=>{special=special===b.dataset.x?null:b.dataset.x;limit=PAGE;if(query){query="";$("q").value=""}selId=null;render()});
+  $("extras").querySelectorAll(".xchip").forEach(b=>b.onclick=()=>{special=special===b.dataset.x?null:b.dataset.x;limit=PAGE;if(query){query="";$("q").value=""}render()});
   const sa=$("seenAll");if(sa)sa.onclick=()=>{prevVisit=Date.now();if(special==="new")special=null;render()};
   /* the list */
   let pool,title,showGroup=true;
-  if(special==="handled"){pool=handledRows;title="Handled, hidden until the stage moves, you're mentioned or it's due"}
+  if(special==="handled"){pool=handledRows;title="Handled, hidden until the stage moves, you're mentioned or the deadline arrives"}
   else if(special==="new"){pool=newRows;title="New since your last visit"}
   /* search also looks through collabs marked handled (they carry a Handled tag), so nothing is unfindable */
-  else if(searching){pool=all;title="Search results"+(handledRows.some(matches)?", handled included":"")}
+  else if(searching){pool=all;title="Search results"+(view==="client"?" across clients":" in all groups")+(handledRows.some(matches)?", handled included":"")}
   else if(view==="client"){pool=clientTab==="all"?active:active.filter(r=>r.client===clientTab);title=clientTab==="all"?"All clients":clientTab}
   else{pool=active.filter(r=>r.group===tab);title=(GROUP_OF[tab]||{}).label||"";showGroup=false}
   const stages=[...new Set(pool.map(r=>r.stage).filter(Boolean))].sort();
@@ -369,145 +313,25 @@ function render(){
   const byClientList=view==="client"&&clientTab==="all"&&!special&&!searching;
   if(byClientList){const cnt={};list.forEach(r=>cnt[r.client]=(cnt[r.client]||0)+1);list=list.slice().sort((a,b)=>(cnt[b.client]-cnt[a.client])||a.client.localeCompare(b.client))}
   $("count").textContent=list.length+(list.length===1?" collab":" collabs");
-  /* keep the open collab if it's still listed; otherwise open the first one (not on phones) */
-  if(selId&&!list.some(r=>r.id===selId)&&!allRows().some(r=>r.id===selId))selId=null;
-  if(!selId&&list.length&&!narrow())selId=list[0].id;
-  shown=list.slice(0,limit);
+  $("colhead").hidden=!list.length;
+  const openIds=new Set([...main.querySelectorAll("details[open]")].map(d=>d.dataset.id));
+  const drafts={};main.querySelectorAll("details.row").forEach(d=>{const b=d.querySelector(".draft");if(b&&!b.hidden)drafts[d.dataset.id]=b.querySelector("textarea").value});
   if(!list.length){
     const msg=special==="handled"?"Nothing marked handled right now.":special==="new"?"Nothing new since your last visit.":(query||stage)?(query?"No collab matches that search.":"Clear the stage filter to see more."):"No collabs here right now.";
-    main.innerHTML=`<div class="lempty"><h3>${query||stage?"Nothing matches":"Nothing here"}</h3>${msg}</div>`;
+    main.innerHTML=`<div class="empty"><h3>${query||stage?"Nothing matches":"Nothing here"}</h3><p>${msg}</p></div>`;
   }else{
     let html="",prev=null;const cnt={};if(byClientList)list.forEach(r=>cnt[r.client]=(cnt[r.client]||0)+1);
-    shown.forEach(it=>{
+    list.slice(0,limit).forEach(it=>{
       if(byClientList&&it.client!==prev){html+=`<div class="chead">${esc(it.client)}<span>${cnt[it.client]}</span></div>`;prev=it.client}
-      html+=rowHTML(it,showGroup);
+      html+=rowHTML(it,showGroup).replace('<details class="row"',`<details class="row"${openIds.has(it.id)?" open":""}`);
     });
-    main.innerHTML=html+(list.length>limit?`<button class="abtn more" id="more">Show ${Math.min(PAGE,list.length-limit)} more of ${list.length-limit}</button>`:"");
+    main.innerHTML=html+(list.length>limit?`<button class="more" id="more">Show ${Math.min(PAGE,list.length-limit)} more of ${list.length-limit}</button>`:"");
     const m=$("more");if(m)m.onclick=()=>{limit+=PAGE;render()};
+    wireRows(main);
+    Object.entries(drafts).forEach(([id,val])=>{const d=main.querySelector(`details.row[data-id="${CSS.escape(id)}"]`);if(!d)return;const b=d.querySelector(".draft");b.hidden=false;b.querySelector("textarea").value=val});
   }
-  $("foot").textContent=`${active.length} active collabs${handledRows.length?`, ${handledRows.length} marked handled`:""}${current.dropped?`, ${current.dropped} finished, handed off or not started hidden`:""}. Each person sees only the collabs where they are the CFS. The reply box posts to Monday.com under your name; nothing else here changes Monday.`;
-  renderPane();
+  $("foot").textContent=`${active.length} active collabs${handledRows.length?`, ${handledRows.length} marked handled`:""}${current.dropped?`, ${current.dropped} finished, handed off or not started hidden`:""}. Each person sees only the collabs where they are the CFS; nothing is changed in Monday from this page.`;
 }
-$("main").addEventListener("click",e=>{const r=e.target.closest(".irow");if(r)select(r.dataset.id,true)});
-function select(id,fromUser){
-  if(selId===id&&!narrow())return;
-  stash();selId=id;
-  $("main").querySelectorAll(".irow").forEach(r=>r.setAttribute("aria-selected",r.dataset.id===id));
-  if(fromUser&&narrow())$("inbox").classList.add("reading");
-  renderPane(true);
-  const row=$("main").querySelector(`.irow[data-id="${CSS.escape(id)}"]`);if(row)row.scrollIntoView({block:"nearest"});
-  if(narrow()&&fromUser)$("inbox").scrollIntoView({block:"start"});
-}
-/* j / k or arrows move through the list (not while typing) */
-document.addEventListener("keydown",e=>{
-  if(!ready||e.metaKey||e.ctrlKey||e.altKey)return;
-  const t=e.target;if(t&&(t.isContentEditable||/^(input|textarea|select)$/i.test(t.tagName)))return;
-  const k=e.key;
-  if(k==="Escape"&&$("inbox").classList.contains("reading")){$("inbox").classList.remove("reading");return}
-  if(!["j","k","ArrowDown","ArrowUp"].includes(k)||!shown.length)return;
-  e.preventDefault();
-  const i=shown.findIndex(r=>r.id===selId),n=k==="j"||k==="ArrowDown"?Math.min(shown.length-1,i+1):Math.max(0,i<0?0:i-1);
-  select(shown[n].id,false);
-});
-
-/* ---------- the open collab ---------- */
-const initials=s=>String(s||"").split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join("")||"?";
-const isMe=name=>!!me&&norm(name)===norm(me.name);
-function bodyHTML(text){
-  let h=esc(String(text||"").trim()).replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');
-  if(me&&me.name){const n=esc("@"+me.name).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");h=h.replace(new RegExp(n,"gi"),m=>`<span class="me">${m}</span>`)}
-  return h.replace(/\n{3,}/g,"\n\n").replace(/\n/g,"<br>");
-}
-function msgHTML(u){
-  const by=(u.creator&&u.creator.name)||"Someone";
-  return`<div class="msg${isMe(by)?" mine":""}"><span class="av" aria-hidden="true">${esc(initials(by))}</span><div>
-    <div class="who"><b>${esc(isMe(by)?"You":by)}</b>${esc(fmtWhen(u.created_at))} · ${esc(ago(u.created_at))}</div>
-    <div class="bubble">${bodyHTML(u.text_body)}</div>
-    ${(u.replies||[]).length?`<div class="replies">${u.replies.slice().sort((a,b)=>ts(a.created_at)-ts(b.created_at)).map(msgHTML).join("")}</div>`:""}
-  </div></div>`;
-}
-const updatesOf=id=>((rawDigest&&rawDigest.updates&&rawDigest.updates[id])||[]).slice().sort((a,b)=>ts(a.created_at)-ts(b.created_at));
-const latestUpdate=id=>{const u=updatesOf(id).filter(x=>x.id);return u[u.length-1]||null};
-let paneFor=null,paneSig="";
-function renderPane(force){
-  const it=selId&&allRows().find(r=>r.id===selId);
-  $("rempty").hidden=!!it;$("rbody").hidden=!it;
-  if(!it){paneFor=null;return}
-  const ups=updatesOf(it.id),sig=it.id+"|"+ups.length+"|"+(it.latest&&it.latest.at)+"|"+isHandled(it)+"|"+it.group;
-  if(!force&&sig===paneSig)return;   /* nothing changed: leave the thread (and its scroll) alone */
-  const changedCollab=paneFor!==it.id;paneFor=it.id;paneSig=sig;
-  const hex=STAGE_HEX[it.stage]||"#8C93B4",grp=GROUP_OF[it.group],done=isHandled(it),cls=timingCls(it);
-  const first=creatorNames(it.creator)[0];
-  $("rhead").innerHTML=`
-    <div class="rtop">
-      <div style="min-width:0"><button type="button" class="linkbtn back" id="backBtn">← All collabs</button>
-        <h2>${esc(it.name)}</h2><div class="cr">${esc(it.creator||"No creator")}${it.pm?` · PM ${esc(it.pm)}`:""}</div></div>
-      <div class="ract">
-        <button type="button" class="abtn${done?" ok":""}" id="hBtn">${done?"✓ Handled · undo":"Mark handled"}</button>
-        <button type="button" class="abtn" id="draftBtn">Draft message</button>
-        ${it.url?`<a class="open-link" href="${esc(it.url)}" target="_blank" rel="noopener">Monday.com ↗</a>`:""}
-      </div>
-    </div>
-    <div class="meta">
-      <span class="mini stage" style="--pc:${hex}">${esc(it.stage)}${it.subStage?` · ${esc(it.subStage)}`:""}</span>
-      <span>Deadline <b>${it.deadline?esc(fmtDue(it.deadline)):"none"}</b>${it.delays?` · <span class="${cls}">${esc(it.delays)}</span>`:""}</span>
-      ${it.daysInStage!=null?`<span><b>${esc(it.daysInStage)}</b> days in stage</span>`:""}
-      <span>Client <b>${esc(it.client||"")}</b></span>
-    </div>
-    ${grp?`<div class="why2"><i style="background:${grp.c}"></i>${esc(grp.label)}${it.reason?` · ${esc(it.reason)}`:""}${done?" · marked handled":""}</div>`:""}
-    <div class="l3" style="display:flex;flex-wrap:wrap;gap:5px">${tagsFor(it,false)}</div>`;
-  $("thread").innerHTML=ups.length?`<div class="tnote">Last ${ups.length} update${ups.length===1?"":"s"} with their replies. Older ones are in Monday.com.</div>`+ups.map(msgHTML).join(""):
-    `<div class="rempty" style="flex:0">No updates on this collab yet. Post the first one below.</div>`;
-  if(changedCollab||force)$("thread").scrollTop=$("thread").scrollHeight;
-  $("hBtn").onclick=()=>toggleHandled(it.id);
-  $("draftBtn").onclick=()=>openDraft(it);
-  const bb=$("backBtn");bb.onclick=()=>$("inbox").classList.remove("reading");
-  /* composer */
-  if(changedCollab){$("ctext").value=drafts[it.id]||"";$("dbox").hidden=!dmsgs[it.id];$("dtext").value=dmsgs[it.id]||"";$("dhint").textContent=""}
-  /* a newly opened collab starts on Reply when it has an update to reply to, else New update */
-  const lu=latestUpdate(it.id);
-  if(changedCollab)setMode(lu?"reply":"new");else if(!lu&&replyMode==="reply")setMode("new");else syncCompose();
-  $("dmsg").href=first?`/messages?creator=${encodeURIComponent(first)}&c=${encodeURIComponent(it.id)}`:"/messages";
-}
-function stash(){if(paneFor){drafts[paneFor]=$("ctext").value;dmsgs[paneFor]=$("dbox").hidden?"":$("dtext").value}}
-function setMode(m){replyMode=m;$("mReply").setAttribute("aria-pressed",m==="reply");$("mNew").setAttribute("aria-pressed",m==="new");syncCompose()}
-function syncCompose(){
-  const lu=paneFor&&latestUpdate(paneFor);
-  $("mReply").disabled=!lu;
-  $("chint").textContent=replyMode==="reply"?(lu?`Replying under ${(lu.creator&&lu.creator.name)||"someone"}'s update from ${ago(lu.created_at)}`:"No update to reply to yet"):"Posts a new update on this collab";
-  $("ctext").placeholder=replyMode==="reply"?"Write a reply… (**bold** works; posts to Monday.com under your name)":"Write a new update… (**bold** works; posts to Monday.com under your name)";
-}
-$("mReply").onclick=()=>setMode("reply");$("mNew").onclick=()=>setMode("new");
-async function send(){
-  const id=paneFor,text=$("ctext").value.trim();if(!id||!text)return;
-  const lu=latestUpdate(id),reply=replyMode==="reply"&&!!lu;
-  const b=$("csend");b.disabled=true;b.textContent="Sending…";
-  try{
-    const r=await api("/api/post",{items:[reply?{id,parentId:String(lu.id)}:{id}],text,reply,pin:false,mentions:[]});
-    const res=(r.results||[])[0]||{};
-    if(!res.posted)throw{message:res.error||"Monday.com didn't take it."};
-    $("ctext").value="";drafts[id]="";$("chint").textContent="Sent. Updating the thread…";
-    await refresh(true);
-    $("chint").textContent="Sent.";setTimeout(syncCompose,2500);
-  }catch(e){$("chint").textContent=(e&&e.message)||"Couldn't send. Try again.";if(SIGNED_OUT.includes(e&&e.code))showSignIn(errCopy(e))}
-  finally{b.disabled=false;b.textContent="Send"}
-}
-$("csend").onclick=send;
-$("ctext").addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){e.preventDefault();send()}});
-/* quick Brkaway draft, with Copy / Rewrite with Claude / Messages */
-function openDraft(it){$("dbox").hidden=false;if(!$("dtext").value)$("dtext").value=draftMessage(it);$("dai").hidden=!aiOn;$("dtext").focus()}
-$("dclose").onclick=()=>{$("dbox").hidden=true;$("dtext").value="";if(paneFor)dmsgs[paneFor]=""};
-$("dcopy").onclick=async e=>{const b=e.currentTarget;try{await navigator.clipboard.writeText($("dtext").value);b.textContent="Copied"}catch(err){$("dtext").select();b.textContent="Press Ctrl+C"}setTimeout(()=>b.textContent="Copy message",1600)};
-$("dai").onclick=async()=>{
-  const it=paneFor&&allRows().find(r=>r.id===paneFor);if(!it||!aiOn)return;
-  const btn=$("dai"),hint=$("dhint"),u=it.latest||{};btn.disabled=true;hint.textContent="Claude is writing…";
-  try{
-    const {text}=await api("/api/rewrite",{name:it.name,creator:it.creator,stage:it.stage,subStage:it.subStage,deadline:it.deadline,delays:it.delays,latestAt:u.at?fmtWhen(u.at):"",latestText:u.text||"",draft:$("dtext").value});
-    $("dtext").value=text;hint.textContent="Check it before sending.";
-  }catch(e){hint.textContent=(e&&e.message&&e.code!=="internal"&&e.code!=="server_unavailable")?e.message:"Claude couldn't write this one. The template still works."}
-  finally{btn.disabled=false}
-};
-
 function setFresh(){
   const f=$("fresh"),t=$("freshText");
   if(!lastAt){if(!busy)t.textContent="Connecting to Monday.com…";return}
@@ -537,6 +361,7 @@ function startDigest(){
   /* show the last copy straight away while the fresh read finishes */
   const saved=cacheRead("digest");
   if(saved&&cfg.user&&saved.email===cfg.user.email){rawDigest=saved.data;savedAt=saved.at;applyRaw(saved.data)}
+  else $("main").innerHTML=`<div class="empty"><h3>Loading your collabs</h3><p>Reading the Production board items where you're the CFS. The first load takes a few seconds; refreshes after that are quick.</p></div>`;
   refresh(false);
 }
 $("signout").onclick=async()=>{try{await api("/api/auth/logout")}catch(e){}cfg.signedIn=false;showSignIn("")};
