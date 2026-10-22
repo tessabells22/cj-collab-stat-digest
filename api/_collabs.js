@@ -24,7 +24,7 @@ const pageQuery = (rules) => `query($board:[ID!]){ boards(ids:$board){ items_pag
 const NEXT_Q = `query($cursor:String!){ next_items_page(limit:500, cursor:$cursor){ cursor items{ ${ITEM_FIELDS} } } }`;
 const UPD_Q = `query($ids:[ID!]){ items(ids:$ids, limit:100){ id updated_at
   column_values(ids:["${COL.cfs}"]){ ... on PeopleValue { persons_and_teams { id kind } } }
-  updates(limit:6){ text_body created_at creator{ name } replies{ text_body created_at creator{ name } } } } }`;
+  updates(limit:6){ id text_body created_at creator{ name } replies{ text_body created_at creator{ name } } } } }`;
 
 export const isCfs = (item, userId) =>
   (item.column_values || []).some((c) => (c.persons_and_teams || []).some((p) => p.kind === "person" && String(p.id) === String(userId)));
