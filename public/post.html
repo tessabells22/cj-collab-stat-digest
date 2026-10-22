@@ -62,6 +62,13 @@
 .results .ok{color:var(--lume)}.results .bad{color:var(--danger-text)}
 .results a{color:inherit}
 .results .why{font-family:var(--f-body);color:var(--muted)}
+.pickwrap{display:flex;flex-direction:column;gap:6px}
+.replyto{display:flex;gap:8px;align-items:center;padding:0 10px 2px 38px;font-size:12px;color:var(--muted)}
+.replyto select{flex:1;min-width:0;font:12.5px var(--f-body);color:var(--text);background:var(--deck-2);border:1px solid var(--line);border-radius:8px;padding:7px 8px}
+.replyto .none{color:var(--danger-text)}
+.modes{display:flex;gap:4px;padding:4px;border:1px solid var(--line);border-radius:12px;align-self:flex-start;background:var(--ink)}
+.modes button{appearance:none;border:0;background:transparent;color:var(--muted);font:600 13px var(--f-body);padding:8px 12px;border-radius:9px;cursor:pointer}
+.modes button[aria-pressed="true"]{background:var(--deck-2);color:var(--text)}
 .empty-note{margin:0;color:var(--muted);font-size:14px}
 @media (max-width:860px){.layout{grid-template-columns:minmax(0,1fr)}.picks{max-height:360px}}
 @media (max-width:640px){.card{padding:18px}}
@@ -78,7 +85,7 @@
     <div>
       <span class="eyebrow">Post update · Production board</span>
       <h1>One update, <em>many collabs</em></h1>
-      <p class="lede"><span class="fresh" id="fresh"><i></i><span id="freshText">Loading your collabs…</span></span><span>Tick the collabs, write the update once, and it's posted (and pinned) on each one in Monday.com under your name.</span></p>
+      <p class="lede"><span class="fresh" id="fresh"><i></i><span id="freshText">Loading your collabs…</span></span><span>Tick the collabs, write it once, and it goes on each one in Monday.com under your name: as a new update (you can pin it) or as a reply under an existing update.</span></p>
     </div>
   </header>
   <div class="note" id="note" hidden></div>
@@ -96,7 +103,9 @@
     </div>
 
     <div class="card composer">
-      <h3>2 · Write the update</h3>
+      <h3 id="h2">2 · Write the update</h3>
+      <div class="modes" role="group" aria-label="Post as"><button type="button" id="mNew" aria-pressed="true">New update</button><button type="button" id="mReply" aria-pressed="false">Reply to an update</button></div>
+      <p class="hint" id="modeHint">Posts a new update on each collab you tick.</p>
       <div class="fmt"><button type="button" id="boldBtn" title="Bold (Ctrl+B)" aria-label="Bold">B</button><button type="button" id="tagBtn" title="Tag someone (type @)" aria-label="Tag someone">@</button></div>
       <div class="tagbox">
         <textarea id="text" aria-label="Update to post" placeholder="e.g. Hi @Kaycee Inza-Cruz, creator will only submit **RAW Files**!" maxlength="5000" aria-autocomplete="list" aria-controls="sugg"></textarea>
@@ -105,7 +114,7 @@
       <div class="tags" id="tags" hidden></div>
       <span class="lbl">Preview</span>
       <div class="preview" id="preview"></div>
-      <label class="check"><input type="checkbox" id="pin" checked> Pin it to the top of each collab's updates</label>
+      <label class="check" id="pinRow"><input type="checkbox" id="pin"> Pin it to the top of each collab's updates</label>
       <div class="acts"><button type="button" class="abtn primary" id="goBtn" disabled>Post to 0 collabs</button><span class="hint" id="goHint">Tick at least one collab.</span></div>
 
       <div class="confirm" id="confirm" hidden>
@@ -118,7 +127,7 @@
     </div>
   </section>
 
-  <footer>This is the only page that changes anything in Monday.com: it adds the update you write, as you, on the collabs you tick. Nothing else is touched.</footer>
+  <footer>This is the only page that changes anything in Monday.com: it adds the update or reply you write, as you, on the collabs you tick. Nothing else is touched.</footer>
 </div>
 </main>
 </div>
@@ -128,7 +137,7 @@
 <script src="/collabs.js"></script>
 <script>
 const $=id=>document.getElementById(id);
-let rows=[],picked=new Set(),mondayName="",posting=false,last=null;
+let rows=[],updatesOf={},replyMode=false,replyTo=new Map(),picked=new Set(),mondayName="",posting=false,last=null;
 
 /* tags picked from the list: name → Monday user id. Typing "@Name" by hand stays plain text in Monday,
    so only names picked here become real tags. */
@@ -154,17 +163,37 @@ function fillSelect(sel,values,label){
 function renderPicks(){
   const list=shown();
   $("picks").innerHTML=list.length?list.map(r=>{const left=daysUntil(r.deadline),cls=r.overdue?"late-t":left===0?"today-t":"";
-    return`<label class="pick"><input type="checkbox" data-id="${esc(r.id)}"${picked.has(r.id)?" checked":""}><span><span class="n">${esc(r.name)}</span><span class="s">${esc(r.stage)}${r.subStage?` · ${esc(r.subStage)}`:""}${r.creator?` · ${esc(r.creator)}`:""}${r.delays?` · <b class="${cls}">${esc(r.delays)}</b>`:""}</span></span></label>`}).join(""):
+    const pick=`<label class="pick"><input type="checkbox" data-id="${esc(r.id)}"${picked.has(r.id)?" checked":""}><span><span class="n">${esc(r.name)}</span><span class="s">${esc(r.stage)}${r.subStage?` · ${esc(r.subStage)}`:""}${r.creator?` · ${esc(r.creator)}`:""}${r.delays?` · <b class="${cls}">${esc(r.delays)}</b>`:""}</span></span></label>`;
+    return replyMode&&picked.has(r.id)?`<div class="pickwrap">${pick}${replyPicker(r)}</div>`:pick}).join(""):
     `<p class="empty-note">${rows.length?"No collabs match.":"No active collabs."}</p>`;
-  $("picks").querySelectorAll("input").forEach(c=>c.onchange=()=>{c.checked?picked.add(c.dataset.id):picked.delete(c.dataset.id);sync()});
+  $("picks").querySelectorAll("input").forEach(c=>c.onchange=()=>{c.checked?picked.add(c.dataset.id):picked.delete(c.dataset.id);if(replyMode)renderPicks();else sync()});
+  $("picks").querySelectorAll(".replyto select").forEach(s=>s.onchange=()=>{replyTo.set(s.dataset.id,s.value);sync()});
   sync();
 }
+/* ---------- replies: which update to reply under, per collab ---------- */
+const updList=id=>(updatesOf[id]||[]).filter(u=>u.id).slice().sort((a,b)=>ts(b.created_at)-ts(a.created_at));
+const clip=(s,n)=>{s=oneLine(s);return s.length>n?s.slice(0,n-1)+"…":s};
+function replyTarget(id){const list=updList(id);const cur=replyTo.get(id);return list.some(u=>String(u.id)===cur)?cur:(list[0]?String(list[0].id):"")}
+function replyPicker(r){
+  const list=updList(r.id),cur=replyTarget(r.id);
+  if(!list.length)return`<div class="replyto"><span class="none">No updates on this collab to reply to.</span></div>`;
+  return`<div class="replyto"><span>Reply to</span><select data-id="${esc(r.id)}" aria-label="Update to reply to on ${esc(r.name)}">${list.map((u,i)=>`<option value="${esc(u.id)}"${String(u.id)===cur?" selected":""}>${i===0?"Latest · ":""}${esc((u.creator&&u.creator.name)||"Someone")} · ${esc(ago(u.created_at))} · ${esc(clip(u.text_body,60))}</option>`).join("")}</select></div>`;
+}
+const noTarget=()=>replyMode?[...picked].filter(id=>!replyTarget(id)):[];
+function setMode(reply){
+  replyMode=reply;$("mNew").setAttribute("aria-pressed",!reply);$("mReply").setAttribute("aria-pressed",reply);
+  $("h2").textContent=reply?"2 · Write the reply":"2 · Write the update";
+  $("modeHint").textContent=reply?"Adds your text as a comment under an update on each collab: the latest one unless you pick another under the collab on the left.":"Posts a new update on each collab you tick.";
+  $("pinRow").hidden=reply;$("confirm").hidden=true;renderPicks();
+}
+$("mNew").onclick=()=>setMode(false);$("mReply").onclick=()=>setMode(true);
 function sync(){
-  const n=picked.size,ok=n>0&&n<=50&&$("text").value.trim().length>0;
+  const n=picked.size,miss=noTarget().length,ok=n>0&&n<=50&&$("text").value.trim().length>0&&!miss;
+  const verb=replyMode?"Reply on":"Post to";
   $("selCount").textContent=`${n} selected`+(n>50?" · 50 at most":"");
-  $("goBtn").textContent=`Post to ${n} collab${n===1?"":"s"}`;
+  $("goBtn").textContent=`${verb} ${n} collab${n===1?"":"s"}`;
   $("goBtn").disabled=!ok||posting;
-  $("goHint").textContent=!n?"Tick at least one collab.":n>50?"Pick 50 or fewer at a time.":!$("text").value.trim()?"Write the update.":"You'll confirm before anything is posted.";
+  $("goHint").textContent=!n?"Tick at least one collab.":n>50?"Pick 50 or fewer at a time.":miss?`${miss} ticked collab${miss===1?" has":"s have"} no update to reply to. Untick ${miss===1?"it":"them"}.`:!$("text").value.trim()?(replyMode?"Write the reply.":"Write the update."):"You'll confirm before anything is posted.";
   $("preview").innerHTML=toHtml($("text").value);
   const lt=liveTags();$("tags").hidden=!lt.length;$("tags").innerHTML=lt.length?"Tagged (they'll be notified): "+lt.map(m=>`<span>${esc(m.name)}</span>`).join(""):"";
   if(!$("confirm").hidden&&!ok)$("confirm").hidden=true;
@@ -222,21 +251,22 @@ $("tagBtn").onclick=()=>{const t=$("text"),a=t.selectionStart,v=t.value,pre=a>0&
 /* ---------- posting ---------- */
 const byId=id=>rows.find(r=>r.id===id)||{id,name:"Collab "+id};
 $("goBtn").onclick=()=>{
-  const list=[...picked].map(byId),pin=$("pin").checked;
-  $("confirmText").textContent=`Post this update${pin?" and pin it":""} on ${list.length} collab${list.length===1?"":"s"}${mondayName?` as ${mondayName}`:""}? Monday.com notifies people who follow these collabs, so it can't be quietly undone.`+(liveTags().length?` ${liveTags().map(m=>m.name).join(", ")} will be tagged and notified on each one (${list.length} notification${list.length===1?"":"s"} each).`:"");
-  $("confirmList").innerHTML=list.map(r=>`<li>${esc(r.name)}</li>`).join("");
+  const list=[...picked].map(byId),pin=!replyMode&&$("pin").checked;
+  $("confirmText").textContent=`${replyMode?"Reply with this":"Post this update"}${pin?" and pin it":""} on ${list.length} collab${list.length===1?"":"s"}${mondayName?` as ${mondayName}`:""}? Monday.com notifies people who follow these collabs, so it can't be quietly undone.`+(liveTags().length?` ${liveTags().map(m=>m.name).join(", ")} will be tagged and notified on each one (${list.length} notification${list.length===1?"":"s"} each).`:"");
+  $("confirmList").innerHTML=list.map(r=>{if(!replyMode)return`<li>${esc(r.name)}</li>`;const u=updList(r.id).find(x=>String(x.id)===replyTarget(r.id));
+    return`<li>${esc(r.name)}${u?` <span class="why">→ under ${esc((u.creator&&u.creator.name)||"Someone")}'s “${esc(clip(u.text_body,50))}”</span>`:""}</li>`}).join("");
   $("confirm").hidden=false;$("results").hidden=true;$("yesBtn").focus();
 };
 $("backBtn").onclick=()=>{$("confirm").hidden=true};
-$("yesBtn").onclick=()=>send([...picked].map(id=>({id})),$("text").value,$("pin").checked,liveTags());
+$("yesBtn").onclick=()=>send([...picked].map(id=>replyMode?{id,parentId:replyTarget(id)}:{id}),$("text").value,!replyMode&&$("pin").checked,liveTags(),replyMode);
 
-async function send(items,text,pin,mentions){
+async function send(items,text,pin,mentions,reply){
   posting=true;$("yesBtn").disabled=true;$("yesBtn").textContent="Posting…";sync();
   try{
-    const {results}=await api("/api/post",{items,text,pin,mentions});
+    const {results}=await api("/api/post",{items,text,pin,mentions,reply:!!reply});
     /* keep earlier successes when this was a retry */
     const prev=last&&last.text===text?last.results.filter(r=>!results.some(x=>x.id===r.id)):[];
-    last={text,pin,mentions,results:[...prev,...results]};
+    last={text,pin,mentions,reply:!!reply,parents:Object.fromEntries(items.filter(x=>x.parentId).map(x=>[x.id,x.parentId])),results:[...prev,...results]};
     showResults();
     if(last.results.every(r=>r.posted&&(r.pinned||!pin))){picked.clear();renderPicks()}
   }catch(e){
@@ -246,17 +276,17 @@ async function send(items,text,pin,mentions){
   }
 }
 function showResults(){
-  const {results,pin,text,mentions}=last;
+  const {results,pin,text,mentions,reply,parents}=last;
   const done=results.filter(r=>r.posted&&(r.pinned||!pin)),failed=results.filter(r=>!(r.posted&&(r.pinned||!pin)));
   const line=r=>{const it=byId(r.id),name=it.url?`<a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.name)}</a>`:esc(it.name);
     if(r.posted&&(r.pinned||!pin))return`<li class="ok">✓ ${name}</li>`;
     if(r.posted)return`<li class="bad">✗ ${name} <span class="why">posted, but not pinned: ${esc(r.error||"")}</span></li>`;
     return`<li class="bad">✗ ${name} <span class="why">${esc(r.error||"not posted")}</span></li>`};
-  $("results").innerHTML=`<p class="hint"><b>${done.length} of ${results.length}</b> ${pin?"posted and pinned":"posted"}.${failed.length?" Retrying only redoes the ones that didn't finish; anything already posted won't be posted twice.":""}</p>
+  $("results").innerHTML=`<p class="hint"><b>${done.length} of ${results.length}</b> ${reply?"replied":pin?"posted and pinned":"posted"}.${failed.length?" Retrying only redoes the ones that didn't finish; anything already posted won't be posted twice.":""}</p>
     <ul>${[...failed,...done].map(line).join("")}</ul>
     ${failed.length?'<div class="acts"><button type="button" class="abtn primary" id="retryBtn">Retry the rest</button></div>':""}`;
   $("results").hidden=false;
-  const rb=$("retryBtn");if(rb)rb.onclick=()=>send(failed.map(r=>({id:r.id,updateId:r.updateId||undefined})),text,pin,mentions);
+  const rb=$("retryBtn");if(rb)rb.onclick=()=>send(failed.map(r=>({id:r.id,updateId:r.updateId||undefined,parentId:reply?(parents[r.id]||replyTarget(r.id)):undefined})),text,pin,mentions,reply);
 }
 
 /* ---------- load ---------- */
@@ -265,6 +295,7 @@ function showGate(msg){if(window.Shell)Shell.setUser(null);$("app").hidden=true;
 $("signout").onclick=async()=>{try{await api("/api/auth/logout")}catch(e){}showGate("")};
 function onData(raw,meta){
   rows=Object.values(groupDigest(raw).groups).flat().sort((a,b)=>a.name.localeCompare(b.name));
+  updatesOf=raw.updates||{};
   const ids=new Set(rows.map(r=>r.id));picked=new Set([...picked].filter(id=>ids.has(id)));
   fillSelect($("clientSel"),rows.map(r=>r.client),"All clients");
   fillSelect($("stageSel"),rows.map(r=>r.stage),"All stages");

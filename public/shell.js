@@ -29,7 +29,8 @@
     { id: "kpi", href: "/kpi", label: "Weekly KPIs" },
     { id: "creators", href: "/creators", label: "Creators" },
     { id: "messages", href: "/messages", label: "Messages" },
-    { id: "meeting", href: "/meeting", label: "Team meeting" },
+    /* Labs: pages still in development, shown only to people on the preview list (see api/config.js) */
+    { id: "meeting", href: "/meeting", label: "Team meeting", labs: true },
     { id: "post", href: "/post", label: "Post update" },
     { id: "guide", href: "/guide", label: "Guide" },
   ];
@@ -44,13 +45,14 @@
   }
 
   /* sidebar */
+  const navLink = n => `<a href="${n.href}"${n.id === page ? ' aria-current="page"' : ""} title="${esc(n.label)}">${ICON[n.id]}<span>${esc(n.label)}</span></a>`;
   const side = app.querySelector(".side");
   side.innerHTML = `
     <div class="side-head">
       <a class="wordmark" href="/" aria-label="Collab Digest home"><span class="mono">CD</span><b>Collab Digest<i></i></b><small>CFS tools · ContentJet</small></a>
       <button type="button" class="side-btn collapse" id="collapseBtn" aria-label="Collapse sidebar">${ICON.chev}</button>
     </div>
-    <nav class="nav" aria-label="Main">${NAV.map(n => `<a href="${n.href}"${n.id === page ? ' aria-current="page"' : ""} title="${esc(n.label)}">${ICON[n.id]}<span>${esc(n.label)}</span></a>`).join("")}</nav>
+    <nav class="nav" aria-label="Main">${NAV.filter(n => !n.labs).map(navLink).join("")}<div id="labsNav" hidden></div></nav>
     <p class="side-foot">Reads the Monday.com Production board. The only change it makes is an update you post from Post update.</p>`;
   if (!app.querySelector(".scrim")) app.insertAdjacentHTML("beforeend", '<div class="scrim" id="scrim"></div>');
   if (store.get("cd.side") === "collapsed") app.classList.add("collapsed");
@@ -173,6 +175,11 @@
   window.Shell.config.then(cfg => {
     window.Shell.setUser(cfg.signedIn ? cfg.user : null);
     if (cfg.domain) document.getElementById("gateDomain").textContent = "@" + cfg.domain;
+    if (cfg.labs) {
+      const labs = document.getElementById("labsNav");
+      labs.innerHTML = `<div class="nav-sec" title="In development: only you can see these"><span>Labs</span><small>In development · only you see this</small></div>` + NAV.filter(n => n.labs).map(navLink).join("");
+      labs.hidden = false;
+    }
     if (cfg.signedIn) {
       document.getElementById("whoMonday").textContent = cfg.monday ? "Monday.com: " + cfg.monday.name : "Monday.com not connected";
       if (!cfg.monday) showConnect("");

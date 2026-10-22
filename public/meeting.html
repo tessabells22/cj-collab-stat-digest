@@ -249,7 +249,12 @@ async function load(fresh){
   }
 }
 $("refreshBtn").onclick=()=>load(true);
-load(false);
+/* Labs page: only people on the preview list can open it while it's in development */
+Shell.config.then(cfg=>{
+  if(!cfg.signedIn||cfg.labs)return load(false);
+  document.querySelector(".content .wrap").innerHTML=`<header class="page-head"><div><span class="eyebrow">Labs · in development</span><h1>Team meeting is <em>coming soon</em></h1><p class="lede">This page is still being built. <a href="/digest">Back to My collabs</a></p></div></header>`;
+  document.getElementById("app").hidden=false;
+});
 </script>
 </body>
 </html>

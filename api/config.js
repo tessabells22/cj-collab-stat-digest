@@ -3,6 +3,15 @@ import { json, readSession, readMonday, aiEnabled, allowedDomain, missingConfig 
 import { slackEnabled, recipients } from "./_briefing.js";
 import { storeEnabled } from "./_store.js";
 
+/* Labs (pages in development) are shown to these people only: PREVIEW_EMAILS (Google emails) or
+   PREVIEW_MONDAY_IDS (Monday user ids; defaults to Tessa's). */
+export function labsFor(s, m) {
+  if (!s) return false;
+  const list = (v) => String(v || "").split(/[\s,;]+/).map((x) => x.trim().toLowerCase()).filter(Boolean);
+  const ids = list(process.env.PREVIEW_MONDAY_IDS ?? "67140875");
+  return list(process.env.PREVIEW_EMAILS).includes(String(s.email).toLowerCase()) || (!!m && ids.includes(String(m.id)));
+}
+
 export function GET(request) {
   const s = readSession(request);
   const m = s ? readMonday(request, s) : null;
@@ -10,6 +19,7 @@ export function GET(request) {
     signedIn: !!s,
     user: s ? { email: s.email, name: s.name } : null,
     monday: m ? { id: m.id, name: m.name } : null,
+    labs: labsFor(s, m),
     domain: allowedDomain(),
     ai: aiEnabled(),
     briefing: slackEnabled(),
