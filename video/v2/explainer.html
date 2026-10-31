@@ -1,0 +1,263 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Collab Digest explainer v2</title>
+<style>
+:root{--bg:#F4F2EC;--ink:#0B0B0B;--lime:#D6F52D;--card:#fff;--line:#E4E1D8;--muted:#6B6B66;--soft:#F7F6F2;--violet:#6544F0;--blue:#1F8FD1;--green:#12A374;--orange:#C9680A;--red:#D93356;--gold:#A87412}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg);font-family:"Inter","DejaVu Sans",sans-serif;color:var(--ink)}
+#stage{position:relative;width:1920px;height:1080px;overflow:hidden}
+.scene{position:absolute;inset:0;opacity:0;visibility:hidden}
+.mono{font-family:"JetBrains Mono",monospace}
+.h{position:absolute;left:0;right:0;top:46px;text-align:center;font-weight:800;font-size:60px;letter-spacing:-.035em;line-height:1.1}
+.huge{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;font-weight:800;font-size:108px;letter-spacing:-.04em;line-height:1.08;padding:0 60px}
+.mark{background:linear-gradient(var(--lime),var(--lime)) no-repeat 0 82%/var(--p,0%) 88%;padding:0 .12em;margin:0 -.12em;border-radius:.06em}
+.strike{position:relative;display:inline-block}
+.strike::after{content:"";position:absolute;left:-.04em;top:55%;height:.09em;width:var(--s,0%);background:var(--ink);border-radius:2px}
+.w{display:inline-block;opacity:0}
+.cam{position:absolute;inset:0}
+.win{position:absolute;left:210px;top:150px;width:1500px;height:740px;background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:0 30px 80px rgba(20,20,10,.14),0 4px 14px rgba(20,20,10,.06);overflow:hidden;display:grid;grid-template-columns:230px 1fr}
+.side{background:var(--soft);border-right:1px solid var(--line);padding:24px 14px;display:flex;flex-direction:column;gap:6px}
+.side .wm{font-weight:800;font-size:26px;letter-spacing:-.03em;padding:0 10px 4px}
+.side .wm i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--violet);margin-left:2px}
+.side .sm{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);padding:0 10px 18px;font-weight:600}
+.side a{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;font-size:17px;font-weight:500;color:var(--muted)}
+.side a i{width:15px;height:15px;border-radius:5px;border:2px solid currentColor;flex:none}
+.side a.on{background:#fff;border:1px solid var(--line);color:var(--ink);font-weight:700}
+.main{display:flex;flex-direction:column;min-width:0}
+.top{height:54px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 26px}
+.crumb{font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.av{width:32px;height:32px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center}
+.pg{padding:26px 34px;display:flex;flex-direction:column;gap:16px;flex:1;min-height:0;position:relative}
+.eb{font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.t1{font-size:36px;font-weight:800;letter-spacing:-.03em}
+.chips{display:flex;gap:12px}
+.chip{display:inline-flex;align-items:center;gap:10px;font-size:19px;font-weight:600;padding:11px 18px;border-radius:999px;background:var(--soft);border:1px solid var(--line);color:var(--muted)}
+.chip i{width:11px;height:11px;border-radius:50%;background:var(--c)}
+.chip b{color:var(--ink)}
+.chip.on{border-color:var(--ink);color:var(--ink);background:#fff}
+.colh{display:grid;grid-template-columns:2.2fr 1.3fr 1.2fr 1.5fr;gap:14px;padding:0 20px 0 22px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.rows{display:flex;flex-direction:column;gap:9px}
+.row{position:relative;border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden}
+.row::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--c)}
+.rh{display:grid;grid-template-columns:2.2fr 1.3fr 1.2fr 1.5fr;gap:14px;align-items:center;padding:13px 20px 13px 22px}
+.nm{font-family:"JetBrains Mono",monospace;font-weight:600;font-size:17px}
+.cr{font-size:14px;color:var(--muted);margin-top:3px}
+.pill{display:inline-block;font-size:14px;font-weight:700;padding:6px 13px;border-radius:999px;color:var(--c);background:color-mix(in srgb,var(--c) 12%,#fff);border:1px solid color-mix(in srgb,var(--c) 35%,#fff)}
+.dl{font-size:16px;font-weight:600}.dl small,.lu small{display:block;font-size:13px;font-weight:500;color:var(--muted);margin-top:2px}
+.lu{font-size:15px;font-weight:600}
+.late{color:var(--red)}
+.thread{padding:0 22px 0 22px;font-size:16px;line-height:1.5;overflow:hidden}
+.thread .m{border-top:1px solid var(--line);padding:12px 0}
+.thread b{font-weight:700}.thread span{color:var(--muted);font-size:13px;margin-left:8px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:700;font-size:17px;padding:13px 22px;border-radius:11px;background:var(--ink);color:#fff;white-space:nowrap}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.btn.ok{background:var(--green)}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px 22px}
+.cursor{position:absolute;left:0;top:0;width:36px;height:36px;z-index:50;opacity:0;pointer-events:none;filter:drop-shadow(0 3px 5px rgba(0,0,0,.3))}
+.ripple{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:3px solid var(--ink);opacity:0;z-index:49;pointer-events:none}
+#capbg{position:absolute;left:0;right:0;bottom:0;height:230px;background:linear-gradient(to bottom,rgba(244,242,236,0),var(--bg) 55%);z-index:55;pointer-events:none}
+#cap{position:absolute;left:100px;right:100px;bottom:50px;height:130px;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:800;font-size:46px;letter-spacing:-.02em;line-height:1.2;z-index:60}
+#cap span.cw{padding:0 .1em;margin:0 .02em;border-radius:.12em}
+#cap span.cw.on{background:var(--lime)}
+#cap span.cw.dim{color:#9a9a93}
+.av2{width:46px;height:46px;border-radius:50%;background:var(--soft);border:1px solid var(--line);display:grid;place-items:center;font-weight:700;font-size:16px;flex:none}
+.tag{font-size:13px;font-weight:700;padding:5px 11px;border-radius:999px}
+.tile{flex:1;border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.tile .k{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.tile .v{font-size:44px;font-weight:800;letter-spacing:-.03em;margin-top:6px}
+.tile .s{font-size:13px;color:var(--muted);margin-top:2px}
+.logo{display:flex;align-items:center;justify-content:center;gap:26px;font-weight:800;font-size:96px;letter-spacing:-.04em}
+.bolt{width:116px;height:116px;border-radius:32px;background:var(--ink);display:grid;place-items:center}
+.bolt svg{width:64px;height:64px}
+.bg-row{position:absolute;width:760px;border:1px solid var(--line);border-radius:16px;background:#fff;padding:20px 26px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 10px 30px rgba(20,20,10,.06)}
+</style></head><body>
+<div id="stage"></div>
+<script>
+const TL = window.TL || {total:75,lines:[]};
+const L = {}; TL.lines.forEach(l => L[l.id] = l);
+const T = TL.total;
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const ease=x=>1-Math.pow(1-clamp(x),3);
+const eio=x=>{x=clamp(x);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2};
+const r=(f,a,b)=>ease((f-a)/(b-a));
+const lerp=(a,b,p)=>a+(b-a)*p;
+const stage=document.getElementById("stage");
+const $=(s,e)=>(e||document).querySelector(s), $$=(s,e)=>[...(e||document).querySelectorAll(s)];
+const BOLT='<svg viewBox="0 0 24 24" fill="#fff"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>';
+
+function win(active, inner, crumb){
+  const nav=[["Home"],["My collabs"],["Weekly KPIs"],["Creators"],["Messages"],["Post update"],["Guide"]];
+  return `<div class="win"><aside class="side"><div class="wm">Collab Digest<i></i></div><div class="sm">Collab status</div>${nav.map(n=>`<a class="${n[0]===active?"on":""}"><i></i>${n[0]}</a>`).join("")}</aside><section class="main"><div class="top"><div class="crumb">${crumb||active}</div><div class="av">TO</div></div><div class="pg">${inner}</div></section></div>`;
+}
+const ROWS=[
+ ["Spring_Launch_UGC_01","Maya Chen","Filming","#6544F0","Dec 2","2d late","late","Maya","3h ago"],
+ ["Unboxing_Reel_Hair_03","Jordan Reyes","Revision","#C9680A","Today","due today","due","Jordan","5h ago"],
+ ["Gift_Guide_Brkaway_02","Lia Park","Waiting on client","#12A374","Dec 6","in 4 days","need","Tessa","1d ago"],
+ ["Serum_Review_UGC_07","Sam Okafor","Contracting","#1F8FD1","Dec 4","in 2 days","need","Sam","2d ago"],
+ ["Holiday_Haul_Spark_05","Ana Costa","Filming","#6544F0","Dec 1","3d late","late","Ana","4h ago"]];
+function rowHTML(r,i,extra){return `<div class="row" data-g="${r[6]}" style="--c:${r[3]}"><div class="rh"><div><div class="nm">${r[0]}</div><div class="cr">${r[1]}</div></div><div><span class="pill" style="--c:${r[3]}">${r[2]}</span></div><div class="dl ${r[6]==='late'?'late':''}">${r[4]}<small>${r[5]}</small></div><div class="lu">${r[8]}<small>${r[7]}</small></div></div>${extra||""}</div>`}
+function digestInner(opts){opts=opts||{};return `<div class="eb">Collab Digest</div><div class="t1">What needs <span class="mark" style="--p:100%">Tessa</span> on Production?</div>
+<div class="chips"><div class="chip" data-c="need" style="--c:#6544F0"><i></i>Needs you <b>5</b></div><div class="chip" data-c="due" style="--c:#A87412"><i></i>Due today <b>1</b></div><div class="chip" data-c="late" style="--c:#D93356"><i></i>Late <b>2</b></div></div>
+<div class="colh"><div>Collab</div><div>Stage</div><div>Deadline</div><div>Latest update</div></div><div class="rows">${ROWS.map((r,i)=>rowHTML(r,i,opts.thread&&i===1?'<div class="thread"><div class="m"><b>Jordan Reyes</b><span>5h ago</span><br>Revised cut is up in Frame.io. Swapped the hook like you asked, can you check the first 3 seconds?</div><div class="m"><b>Tessa Olea</b><span>comment · 1d ago</span><br>Love the unboxing. Hook feels slow, can we open on the product?</div></div>':"")).join("")}</div>`}
+
+// ---- cursor ----
+const cur=document.createElement("div");cur.className="cursor";cur.innerHTML='<svg viewBox="0 0 24 24"><path d="M4 2l15 9-6.5 1.5L9 19z" fill="#0B0B0B" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+const rip=document.createElement("div");rip.className="ripple";
+const ev=v=>typeof v==="function"?v():v;
+const C=(el,dx=0,dy=0)=>()=>{const b=el.getBoundingClientRect();return [b.left+b.width*.5+dx,b.top+b.height*.55+dy]};
+function setCursor(f,pts){ // pts [[f,[x,y]|fn,click?]]
+  let [x,y]=ev(pts[0][1]);
+  for(let i=0;i<pts.length-1;i++){const a=pts[i],b=pts[i+1];if(f>=a[0]&&f<=b[0]){const p=eio((f-a[0])/(b[0]-a[0]));const A=ev(a[1]),B=ev(b[1]);x=lerp(A[0],B[0],p);y=lerp(A[1],B[1],p);break}if(f>b[0]){[x,y]=ev(b[1])}}
+  cur.style.opacity=f>pts[0][0]-.02?1:0;cur.style.transform=`translate(${x-6}px,${y-3}px)`;
+  let ro=0,rs=1,rx=0,ry=0;pts.forEach(p=>{if(p[2]){const q=(f-p[0])/0.05;if(q>0&&q<1){ro=1-q;rs=1+q*2.2;[rx,ry]=ev(p[1])}}});
+  rip.style.opacity=ro;rip.style.transform=`translate(${rx}px,${ry}px) scale(${rs})`;
+}
+
+// ---- helpers for text ----
+function words(html){ // wrap plain words (outside tags) in .w spans
+  return html.replace(/(<[^>]+>)|([^<\s]+)/g,(m,t,w)=>t?t:`<span class="w">${w}</span>`).replace(/<\/span> <span/g,"</span> <span");
+}
+function revealWords(el,f,a,b){const ws=$$(".w",el);ws.forEach((w,i)=>{const p=r(f,a+(b-a)*i/ws.length,a+(b-a)*i/ws.length+.12*(b-a)+.001);w.style.opacity=p;w.style.transform=`translateY(${(1-p)*26}px)`})}
+function setMark(el,p){$$(".mark",el).forEach(m=>m.style.setProperty("--p",(p*100)+"%"))}
+function fadeIn(el,f,a,b,dy){const p=r(f,a,b);el.style.opacity=p;el.style.transform=`translateY(${(1-p)*(dy==null?30:dy)}px)`;return p}
+
+// ---- scenes ----
+const SC=[];
+function scene(id,startLine,html,update,opt){SC.push({id,startLine,html,update,opt:opt||{}})}
+
+scene("S1","s1a",
+ `<div class="huge" id="a1">${words('Working on the <span class="mark">Production</span> board?')}</div><div class="huge" id="a2">${words('Which collabs need <span class="mark">you</span> today?')}</div>`,
+ (el,f,lt,d)=>{const sw=L.s1b.start-0.3-SC[0].s;const A=$("#a1",el),B=$("#a2",el);
+  revealWords(A,lt,0.15,0.9);setMark(A,r(lt,1.0,1.5));A.style.opacity=1-r(lt,sw-.3,sw);
+  const lb=lt-sw;B.style.opacity=lb>-.01?1:0;revealWords(B,lb,0.05,0.7);setMark(B,r(lb,0.8,1.3));});
+
+scene("S2","s2",
+ `<div id="bgc"></div><div class="huge" style="background:radial-gradient(closest-side,var(--bg) 62%,transparent);padding:40px 0" id="t2">${words('Late. Due. <span class="mark">Quiet.</span>')}</div>`,
+ (el,f,lt,d)=>{const bg=$("#bgc",el);if(!bg.children.length){const names=["Spring_Launch_UGC_01","Unboxing_Reel_03","Gift_Guide_02","Serum_Review_07","Holiday_Haul_05","GRWM_Brkaway_04","Try_On_Haul_09","Summer_Teaser_11","Skincare_Routine_06","Q4_Refresh_08","Hair_Care_Review_02","Pet_Treats_UGC_12"];const cols=["#6544F0","#C9680A","#12A374","#1F8FD1","#D93356"];
+   for(let i=0;i<24;i++){const x=i%2?1010:150;const rw=document.createElement("div");rw.className="bg-row";rw.style.cssText=`left:${x}px;top:${(i>>1)*120}px;border-left:6px solid ${cols[i%5]}`;rw.innerHTML=`<div class="nm" style="font-size:20px">${names[i%12]}</div><span class="pill" style="--c:${cols[(i+1)%5]}">Stage ${i%7+1}</span>`;bg.appendChild(rw)}}
+   bg.style.transform=`translateY(${-lt*95+60}px)`;bg.style.opacity=r(lt,0,.6)*.9;
+   const T2=$("#t2",el);const ws=$$(".w",$("#t2",el));
+   const parts=[$$(".w",T2)[0],$$(".w",T2)[1],$$(".w",T2)[2]];parts.forEach((w,i)=>{const p=r(lt,.5+i*.55,.9+i*.55);w.style.opacity=p;w.style.transform=`translateY(${(1-p)*26}px)`});setMark(T2,r(lt,1.7,2.2));
+  });
+
+scene("S3","s3",
+ `<div class="logo" id="lg"><div class="bolt">${BOLT}</div><span>Collab Digest</span></div><div class="huge" style="top:62%;font-size:74px;font-weight:700" id="tg">${words('The easiest way to see <span class="mark">what needs you.</span>')}</div>`,
+ (el,f,lt,d)=>{const lg=$("#lg",el);lg.style.position="absolute";lg.style.left=0;lg.style.right=0;lg.style.top=`${lerp(430,300,eio((lt-1.3)/.8))}px`;const p=r(lt,.1,.7);lg.style.opacity=p;lg.style.transform=`scale(${.9+.1*p})`;
+  revealWords($("#tg",el),lt,1.5,2.4);setMark($("#tg",el),r(lt,2.5,3.1))});
+
+scene("S4","s4",
+ `<div class="h" id="h4">${words('Sign in. Paste a token. <span class="mark">Done.</span>')}</div><div id="st" style="position:absolute;left:150px;right:150px;top:250px;display:flex;gap:34px"></div>`,
+ (el,f,lt,d)=>{const h=$("#h4",el);revealWords(h,f,0,.18);setMark(h,r(f,.62,.74));
+  const st=$("#st",el);if(!st.children.length){st.innerHTML=[
+   ['1','Sign in with Google','Company accounts only. Limited to your Workspace domain.','<div class="btn ghost" style="font-size:22px;padding:18px 26px;margin-top:20px"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.2-2.1 3.5-5.1 3.5-8.8z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.100.7-2.500 1.200-4.100 1.200-3.100 0-5.800-2.100-6.700-5H1.300v3.100C3.300 21.400 7.300 24 12 24z"/><path fill="#FBBC05" d="M5.300 14.300a7.200 7.200 0 0 1 0-4.600V6.600H1.300a12 12 0 0 0 0 10.800z"/><path fill="#EA4335" d="M12 4.800c1.800 0 3.300.6 4.600 1.800l3.400-3.400C18 1.200 15.200 0 12 0 7.300 0 3.300 2.600 1.300 6.600l4 3.100c.9-2.900 3.600-4.900 6.700-4.900z"/></svg>Continue with Google</div>'],
+   ['2','Paste your Monday token','Your own personal API token, saved once. It never reaches the page.','<div class="mono" style="margin-top:20px;font-size:19px;padding:18px 20px;border-radius:12px;border:1px solid var(--line);background:var(--soft);letter-spacing:.12em">eyJhbGciOi••••••••••</div>'],
+   ['3','Only your collabs','Just the ones where you are the CFS, read-only.','<div class="chips" style="margin-top:20px"><div class="chip" style="--c:#6544F0"><i></i>Your CFS</div><div class="chip" style="--c:#12A374"><i></i>Read-only</div></div>']].map(s=>`<div class="card st" style="flex:1;padding:34px;min-height:430px"><div style="width:54px;height:54px;border-radius:50%;background:var(--ink);color:#fff;font-weight:800;font-size:26px;display:grid;place-items:center;margin-bottom:26px">${s[0]}</div><div style="font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1.1">${s[1]}</div><div style="font-size:21px;color:var(--muted);margin-top:14px;line-height:1.4">${s[2]}</div>${s[3]}<div class="ck" style="position:absolute;right:26px;top:26px;width:44px;height:44px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;font-size:26px;font-weight:800;opacity:0">&#10003;</div></div>`).join("");$$(".st",st).forEach(c=>c.style.position="relative")}
+  $$(".st",st).forEach((c,i)=>{const p=fadeIn(c,f,.1+i*.14,.3+i*.14,50);const k=$(".ck",c);const q=r(f,.5+i*.14,.58+i*.14);k.style.opacity=q;k.style.transform=`scale(${.5+.5*q})`})});
+
+scene("S5","s5",
+ `<div class="h" id="h5">${words('Three groups. <span class="mark">One page.</span>')}</div><div class="cam" id="cam5">${win("My collabs",digestInner(),"Collab Digest")}</div>`,
+ (el,f,lt,d)=>{const h=$("#h5",el);revealWords(h,f,0,.12);setMark(h,r(f,.15,.25));
+  const cam=$("#cam5",el);cam.style.transformOrigin="55% 55%";cam.style.transform=`scale(${lerp(1,1.08,eio(f))})`;
+  const w=$(".win",el);const rows=$$(".row",el);
+  w.style.opacity=r(f,.05,.15);
+  rows.forEach((rw,i)=>{const p=r(f,.18+i*.04,.28+i*.04);const sel=f>.62?(rw.dataset.g==="late"?1:.22):1;rw.style.opacity=p*sel;rw.style.transform=`translateX(${(1-p)*120}px)`});
+  const chips=$$(".chip",el);const lc=chips[2];lc.classList.toggle("on",f>.6);chips[0].classList.toggle("on",f>.2&&f<.6);
+  setCursor(f,[[.3,[1500,600]],[.58,C(lc),1],[.9,C(lc,14,16)]]);});
+
+scene("S6","s6",
+ `<div class="h" id="h6">${words('The latest update, <span class="mark">right there.</span>')}</div><div class="cam" id="cam6">${win("My collabs",digestInner({thread:true}),"Collab Digest")}</div>`,
+ (el,f,lt,d)=>{const h=$("#h6",el);revealWords(h,f,0,.14);setMark(h,r(f,.2,.3));
+  const cam=$("#cam6",el);const z=lerp(1,1.1,eio((f-.1)/.5));cam.style.transformOrigin="50% 45%";cam.style.transform=`scale(${z})`;
+  const th=$(".thread",el);if(!th.dataset.h){th.style.height="auto";th.dataset.h=th.scrollHeight}const p=r(f,.28,.42);th.style.height=`${p*th.dataset.h}px`;th.style.opacity=p;
+  $$(".m",th).forEach((m,i)=>{const q=r(f,.42+i*.16,.56+i*.16);m.style.opacity=q;m.style.transform=`translateX(${(1-q)*30}px)`});
+  setCursor(f,[[.05,[1500,700]],[.28,C($(".rh",$$(".row",el)[1]),-200,0),1],[.9,C($(".rh",$$(".row",el)[1]),-170,20)]]);});
+
+scene("S7","s7",
+ `<div class="h" style="left:140px;right:auto;top:300px;text-align:left;font-size:92px;line-height:1.04" id="h7">${words('Before you<br>open your<br><span class="mark">laptop.</span>')}</div>
+  <div class="card" id="sl" style="position:absolute;right:140px;top:200px;width:880px;padding:34px;box-shadow:0 30px 80px rgba(20,20,10,.14)"><div style="display:flex;align-items:center;gap:18px"><div class="bolt" style="width:72px;height:72px;border-radius:20px"><svg viewBox="0 0 24 24" fill="#fff" style="width:40px;height:40px"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></div><div><div style="font-weight:800;font-size:30px">Collab Digest <span style="font-size:15px;background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:2px 7px;color:var(--muted);font-weight:700;vertical-align:middle">APP</span></div><div style="color:var(--muted);font-size:20px">7:30 AM</div></div></div>
+  <div style="font-size:30px;line-height:1.4;margin-top:24px">Good morning. Here is your day.</div>
+  <div class="chips" style="margin:20px 0 22px"><div class="chip" style="--c:#6544F0;font-size:24px"><i></i>Needs you <b>5</b></div><div class="chip" style="--c:#A87412;font-size:24px"><i></i>Due today <b>1</b></div><div class="chip" style="--c:#D93356;font-size:24px"><i></i>Late <b>2</b></div></div>
+  <div class="tp" style="font-size:24px;line-height:1.5"><div class="mono" style="font-size:22px;margin:8px 0">1. Spring_Launch_UGC_01 <span class="late" style="font-weight:700">2d late</span></div><div class="mono" style="font-size:22px;margin:8px 0">2. Holiday_Haul_Spark_05 <span class="late" style="font-weight:700">3d late</span></div><div class="mono" style="font-size:22px;margin:8px 0">3. Unboxing_Reel_Hair_03 <span style="color:var(--gold);font-weight:700">due today</span></div></div></div>`,
+ (el,f,lt,d)=>{const h=$("#h7",el);revealWords(h,f,.02,.3);setMark(h,r(f,.35,.5));
+  const sl=$("#sl",el);const p=r(f,.18,.34);sl.style.opacity=p;sl.style.transform=`translateY(${(1-p)*80}px) rotate(${(1-p)*2}deg)`;
+  $$(".tp>div",el).forEach((x,i)=>{const q=r(f,.5+i*.1,.6+i*.1);x.style.opacity=q;x.style.transform=`translateX(${(1-q)*30}px)`})});
+
+scene("S8","s8",
+ `<div class="h" id="h8">${words("Know how you're <span class=\"mark\">really</span> doing.")}</div><div class="cam" id="cam8">${win("Weekly KPIs",`<div class="eb">Weekly KPIs</div><div style="display:flex;gap:14px"><div class="tile"><div class="k">Delivered</div><div class="v" data-n="38">0</div><div class="s">last 8 weeks</div></div><div class="tile"><div class="k">On-time rate</div><div class="v" style="color:var(--green)" data-n="92" data-suf="%">0</div><div class="s">up 6 pts</div></div><div class="tile"><div class="k">Cycle time</div><div class="v" data-n="11" data-suf="d">0</div><div class="s">median</div></div><div class="tile"><div class="k">Stuck now</div><div class="v" style="color:var(--red)" data-n="3">0</div><div class="s">over 7 days in stage</div></div></div>
+  <div style="display:flex;gap:14px;flex:1;min-height:0"><div class="card" style="flex:1.6;display:flex;flex-direction:column"><div class="eb" style="margin-bottom:10px">Deliveries, 8 weeks</div><div id="bars" style="display:flex;align-items:flex-end;gap:14px;flex:1"></div></div><div class="card" style="flex:1"><div class="eb" style="margin-bottom:10px">Watchlist</div><div id="wl"></div></div></div>`,"Weekly KPIs")}</div>`,
+ (el,f,lt,d)=>{const h=$("#h8",el);revealWords(h,f,0,.12);setMark(h,r(f,.18,.28));
+  const w=$(".win",el);w.style.opacity=r(f,.05,.15);
+  const b=$("#bars",el);if(!b.children.length){[[6,1],[7,1],[6,2],[8,1],[7,0],[9,1],[8,0],[10,1]].forEach(([a,c],i)=>{const col=document.createElement("div");col.style.cssText="flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:3px;height:100%";col.innerHTML=`<div style="background:var(--red);border-radius:5px;height:${c*14}px"></div><div style="background:var(--green);border-radius:5px;height:${a*22}px"></div>`;b.appendChild(col)});
+   $("#wl",el).innerHTML=[["Spring_Launch_UGC_01","2d late","#D93356"],["Holiday_Haul_Spark_05","3d late","#D93356"],["Gift_Guide_Brkaway_02","9d in review","#C9680A"]].map(x=>`<div style="padding:10px 0;border-top:1px solid var(--line);display:flex;justify-content:space-between;font-size:15px"><span class="mono" style="font-weight:600">${x[0].slice(0,15)}…</span><b style="color:${x[2]}">${x[1]}</b></div>`).join("")}
+  $$("#bars>div",el).forEach((c,i)=>{const p=r(f,.2+i*.04,.4+i*.04);c.style.transformOrigin="bottom";c.style.transform=`scaleY(${p})`});
+  $$("[data-n]",el).forEach(x=>{const p=r(f,.22,.5);x.textContent=Math.round(+x.dataset.n*p)+(x.dataset.suf||"")});
+  $$("#wl>div",el).forEach((x,i)=>{const q=r(f,.5+i*.1,.62+i*.1);x.style.opacity=q});
+  $("#cam8",el).style.transform=`scale(${lerp(1,1.05,eio(f))})`;});
+
+scene("S9","s9",
+ `<div class="h" id="h9">${words('Spot the creators who’ve <span class="mark">gone quiet.</span>')}</div><div class="cam" id="cam9">${win("Creators",`<div class="eb">Creators</div><div class="t1">Everyone on your collabs</div><div class="rows" id="cr"></div>`,"Creators")}</div>`,
+ (el,f,lt,d)=>{const h=$("#h9",el);revealWords(h,f,0,.14);setMark(h,r(f,.2,.32));
+  const w=$(".win",el);w.style.opacity=r(f,.05,.15);
+  const cr=$("#cr",el);if(!cr.children.length){const C=[["MC","Maya Chen","1 filming · 1 contracting","2 active","1 late","1d ago",0],["JR","Jordan Reyes","2 filming · 1 revision","3 active","","6d ago",1],["LP","Lia Park","1 waiting on client","1 active","","1d ago",0],["SO","Sam Okafor","1 contracting","1 active","","7d ago",1],["AC","Ana Costa","1 filming","1 active","1 late","4h ago",0]];
+   cr.innerHTML=C.map(c=>`<div class="row" style="--c:var(--line)"><div class="rh" style="grid-template-columns:2.4fr 1.6fr 1fr 1.2fr"><div style="display:flex;gap:14px;align-items:center"><div class="av2">${c[0]}</div><div><div style="font-weight:700;font-size:20px">${c[1]}</div><div class="cr">${c[2]}</div></div></div><div style="display:flex;gap:8px"><span class="tag" style="background:var(--soft);border:1px solid var(--line)">${c[3]}</span>${c[4]?`<span class="tag" style="background:#fdebef;color:var(--red)">${c[4]}</span>`:""}</div><div class="lu" style="font-size:16px">${c[5]}<small>last update</small></div><div style="text-align:right"><span class="tag q" data-q="${c[6]}" style="background:var(--lime);color:var(--ink);font-size:15px;opacity:0">Quiet</span></div></div></div>`).join("")}
+  $$(".row",cr).forEach((rw,i)=>{const p=r(f,.15+i*.05,.28+i*.05);rw.style.opacity=p;rw.style.transform=`translateX(${(1-p)*100}px)`});
+  $$(".q",cr).forEach((q,i)=>{if(q.dataset.q==="1"){const k=i===1?.5:.68;const p=r(f,k,k+.08);q.style.opacity=p;q.style.transform=`scale(${.6+.4*p})`;q.parentElement.parentElement.parentElement.style.borderColor=p>0.5?"#9bb800":"var(--line)"}});
+  $("#cam9",el).style.transform=`scale(${lerp(1,1.06,eio(f))})`;});
+
+scene("S10","s10",
+ `<div class="h" id="h10">${words('Nudges that <span class="mark">write themselves.</span>')}</div><div class="cam" id="cam10">${win("Messages",`<div class="eb">Messages</div><div style="display:flex;gap:18px;flex:1;min-height:0"><div style="width:300px;display:flex;flex-direction:column;gap:9px">${["Late nudge","Asset chase","Revision request","Deadline reminder","Check-in"].map((t,i)=>`<div class="card" style="padding:14px 16px;font-weight:700;font-size:17px;${i===0?"border-color:var(--ink)":"color:var(--muted)"}">${t}</div>`).join("")}</div>
+  <div class="card" style="flex:1;display:flex;flex-direction:column"><div class="eb" style="margin-bottom:14px">Late nudge · Jordan Reyes</div><div id="msg" style="font-size:23px;line-height:1.6">Hi <span class="mark" id="m1">Jordan</span>, quick check on <span class="mark" id="m2">Unboxing_Reel_Hair_03</span>. It was due <span class="mark" id="m3">Dec 2</span>. Can you send it over today?</div><div style="margin-top:auto;display:flex;gap:12px"><div class="btn" id="cp">Copy message</div></div></div></div>`,"Messages")}</div><div id="toast" style="position:absolute;left:50%;top:790px;margin-left:-140px;width:280px;text-align:center;background:var(--ink);color:#fff;font-weight:700;font-size:20px;padding:14px;border-radius:12px;opacity:0">Copied to clipboard</div>`,
+ (el,f,lt,d)=>{const h=$("#h10",el);revealWords(h,f,0,.14);setMark(h,r(f,.2,.32));
+  const w=$(".win",el);w.style.opacity=r(f,.05,.15);
+  ["#m1","#m2","#m3"].forEach((s,i)=>{$(s,el).style.setProperty("--p",(r(f,.35+i*.1,.45+i*.1)*100)+"%")});
+  const click=.72;$("#cp",el).textContent=f>click?"Copied ✓":"Copy message";$("#cp",el).className="btn"+(f>click?" ok":"");
+  const tp=r(f,click,click+.06);$("#toast",el).style.opacity=tp*(1-r(f,.92,.98));
+  $("#cam10",el).style.transform=`scale(${lerp(1,1.05,eio(f))})`;
+  const cp=$("#cp",el);setCursor(f,[[.15,[1500,420]],[.55,[1500,420]],[.7,C(cp),1],[.95,C(cp,12,10)]]);});
+
+scene("S11","s11",
+ `<div class="h" id="h11">${words('One update. <span class="mark">Every collab.</span>')}</div><div class="cam" id="cam11">${win("Post update",`<div class="eb">Post update</div><div style="display:flex;gap:18px;flex:1;min-height:0"><div style="width:470px;display:flex;flex-direction:column;gap:9px" id="pl"></div><div class="card" style="flex:1;display:flex;flex-direction:column"><div class="eb" style="margin-bottom:12px">Your update</div><div id="ed" style="font-size:22px;line-height:1.55;min-height:150px"></div><div style="margin-top:auto;display:flex;justify-content:space-between;align-items:center"><span style="color:var(--muted);font-size:16px" id="cnt">0 collabs selected</span><div class="btn" id="pb">Post update</div></div></div></div><div id="modal" style="position:absolute;inset:0;background:rgba(244,242,236,.8);display:grid;place-items:center;opacity:0"><div class="card" style="width:520px;padding:30px;box-shadow:0 30px 70px rgba(0,0,0,.18)"><div style="font-size:26px;font-weight:800;letter-spacing:-.02em" id="mt">Post on 4 collabs as Tessa?</div><div style="color:var(--muted);font-size:17px;margin:8px 0 22px">Posted under your Monday name.</div><div style="display:flex;gap:12px"><div class="btn" id="cf">Confirm and post</div><div class="btn ghost">Cancel</div></div></div></div>`,"Post update")}</div>`,
+ (el,f,lt,d)=>{const h=$("#h11",el);revealWords(h,f,0,.14);setMark(h,r(f,.18,.28));
+  const w=$(".win",el);w.style.opacity=r(f,.04,.12);
+  const pl=$("#pl",el);const names=["Spring_Launch_UGC_01","Unboxing_Reel_Hair_03","Gift_Guide_Brkaway_02","Serum_Review_UGC_07","Holiday_Haul_Spark_05"];
+  if(!pl.children.length){pl.innerHTML=names.map(n=>`<div class="card" style="padding:13px 16px;display:flex;align-items:center;gap:14px"><div class="ckb" style="width:26px;height:26px;border-radius:7px;border:2px solid var(--line);display:grid;place-items:center;color:#fff;font-size:17px;font-weight:800">&nbsp;</div><div class="mono" style="font-weight:600;font-size:16px">${n}</div></div>`).join("")}
+  const tk=[.22,.28,.34,.40];let n=0;$$(".ckb",pl).forEach((c,i)=>{const on=i<4&&f>tk[i];if(on)n++;c.style.background=on?"var(--ink)":"transparent";c.style.borderColor=on?"var(--ink)":"var(--line)";c.innerHTML=on?"✓":"&nbsp;"});
+  $("#cnt",el).textContent=n+" collab"+(n===1?"":"s")+" selected";
+  const full="Heads up @Maya, the videos are approved. Thank you!";const k=Math.floor(full.length*r(f,.44,.62));const tx=full.slice(0,k).replace("@Maya",'<span style="background:var(--lime);padding:0 6px;border-radius:5px;font-weight:700">@Maya</span>');$("#ed",el).innerHTML=tx;
+  const md=r(f,.74,.8)*(1-r(f,.94,1));$("#modal",el).style.opacity=md;
+  const done=f>.9;$("#cf",el).textContent=done?"Posted on 4 collabs ✓":"Confirm and post";$("#cf",el).className="btn"+(done?" ok":"");$("#mt",el).textContent=done?"Done.":"Post on 4 collabs as Tessa?";
+  $("#cam11",el).style.transform=`scale(${lerp(1,1.04,eio(f))})`;
+  const kb=$$(".ckb",el),pb=$("#pb",el),cf=$("#cf",el);setCursor(f,[[.05,[1500,300]],[.2,C(kb[0])],[.22,C(kb[0]),1],[.28,C(kb[1]),1],[.34,C(kb[2]),1],[.4,C(kb[3]),1],[.52,[1200,560]],[.7,C(pb),1],[.86,C(cf),1],[.97,C(cf,8,8)]]);});
+
+scene("S12","s12",
+ `<div class="huge" id="t12">${words('Collab status, without the <span class="strike">scrolling.</span>')}</div>`,
+ (el,f,lt,d)=>{const t=$("#t12",el);revealWords(t,lt,0.1,1.2);const st=$(".strike",el);st.style.setProperty("--s",(r(lt,1.5,1.9)*100)+"%");st.style.opacity=1-.55*r(lt,1.6,2.0);});
+
+scene("S13","s13",
+ `<div class="logo" id="lg13"><div class="bolt">${BOLT}</div><span>Collab Digest</span></div><div class="huge" style="top:64%;font-size:70px;font-weight:700" id="t13">${words('Start every day knowing <span class="mark">what needs you.</span>')}</div>`,
+ (el,f,lt,d)=>{const lg=$("#lg13",el);lg.style.position="absolute";lg.style.left=0;lg.style.right=0;lg.style.top="300px";const p=r(lt,.1,.7);lg.style.opacity=p;lg.style.transform=`scale(${.9+.1*p})`;revealWords($("#t13",el),lt,1.0,2.0);setMark($("#t13",el),r(lt,2.1,2.7))});
+
+// ---- layout: scene windows from timeline ----
+SC.forEach((s,i)=>{s.s=i===0?0:(L[s.startLine]?L[s.startLine].start-0.3:i*5)});
+SC.forEach((s,i)=>{s.e=i<SC.length-1?SC[i+1].s+0.35:T});
+SC.forEach(s=>{const el=document.createElement("section");el.className="scene";el.id="sc_"+s.id;el.innerHTML=s.html;stage.appendChild(el);s.el=el});
+stage.appendChild(rip);stage.appendChild(cur);
+const capbg=document.createElement("div");capbg.id="capbg";stage.appendChild(capbg);const cap=document.createElement("div");cap.id="cap";stage.appendChild(cap);
+
+// ---- captions: chunks of <=6 words, split at punctuation ----
+const CH=[];
+TL.lines.forEach(l=>{let cur=[];l.words.forEach((w,i)=>{cur.push(w);const end=/[.?!,]$/.test(w.w);if((end&&cur.length>=2)||cur.length>=6||i===l.words.length-1){CH.push({words:cur,t0:cur[0].t0,t1:cur[cur.length-1].t1,line:l});cur=[]}})});
+let lastChunk=-1;
+function captions(t){let idx=-1;for(let i=0;i<CH.length;i++){const nextT=i<CH.length-1?CH[i+1].t0:1e9;if(t>=CH[i].t0-0.08&&t<Math.min(CH[i].t1+0.2,nextT)){idx=i}}
+  if(idx!==lastChunk){lastChunk=idx;cap.innerHTML=idx<0?"":CH[idx].words.map(w=>`<span class="cw">${w.w}</span>`).join(" ")}
+  if(idx>=0){$$(".cw",cap).forEach((e,i)=>{const w=CH[idx].words[i];e.classList.toggle("on",t>=w.t0&&t<w.t1+.02);e.classList.toggle("dim",t<w.t0)});cap.style.opacity=1}else cap.style.opacity=0;}
+
+window.TOTAL=T;
+window.render=function(t){
+  cur.style.opacity=0;rip.style.opacity=0;
+  SC.forEach(s=>{const vis=t>=s.s&&t<s.e;s.el.style.visibility=vis?"visible":"hidden";if(!vis){s.el.style.opacity=0;return}
+    const lt=t-s.s,d=s.e-s.s,f=lt/d;const fin=clamp(lt/0.3),fout=clamp((s.e-t)/0.3);s.el.style.opacity=Math.min(fin,fout);
+    s.update(s.el,f,lt,d)});
+  captions(t);
+};
+render(0);
+</script></body></html>
