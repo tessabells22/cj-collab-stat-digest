@@ -2,7 +2,7 @@
 // The queries live server-side (api/_collabs.js), and every result is limited to collabs where that person is the CFS.
 import { json, requireMonday, requireSession, errorResponse, AppError } from "./_lib.js";
 import { activeItems, kpiItems, updatesFor, updatesMap, accountUsers } from "./_collabs.js";
-import { missedTags } from "./_mentions.js";
+import { planOwn, ownChunk, feedPage, itemsFor } from "./_mentions.js";
 import { labsFor } from "./config.js";
 
 export async function POST(request) {
@@ -29,11 +29,23 @@ export async function POST(request) {
     if (body.op === "users") return json({ users: await accountUsers(user) });
     if (body.op === "kpi") return json({ me, items: await kpiItems(user, { fresh }) });
 
-    /* Catch up (Labs): @tags of this person since a time. Limited to the preview list while it's in development. */
-    if (body.op === "missed") {
+    /* Catch up (Labs): the page reads @tags in short steps (plan → own collabs in chunks → feed pages → collab details)
+       and merges them, so no single call runs long. Limited to the preview list while it's in development. */
+    if (typeof body.op === "string" && body.op.startsWith("missed_")) {
       if (!labsFor(session, user)) throw new AppError("forbidden", "Catch up is still in development.", 403);
-      const since = Number(body.since);
-      return json({ me, ...(await missedTags(user, Number.isFinite(since) ? since : Date.now() - 3 * 864e5, { fresh })) });
+      const ids = (list, max) => {
+        const out = (Array.isArray(list) ? list : []).map(String).filter((id) => /^\d{1,20}$/.test(id));
+        if (!out.length || out.length > max) throw new AppError("bad_request", `Send between 1 and ${max} item ids.`, 400);
+        return out;
+      };
+      if (body.op === "missed_plan") return json({ me, ids: await planOwn(user, { fresh }) });
+      if (body.op === "missed_own") return json({ me, posts: await ownChunk(user, ids(body.ids, 40)) });
+      if (body.op === "missed_feed") {
+        const since = Number(body.since), page = Math.floor(Number(body.page));
+        if (!Number.isFinite(since) || !(page >= 1 && page <= 30)) throw new AppError("bad_request", "Send since and page.", 400);
+        return json({ me, ...(await feedPage(user, since, page, body.useFrom !== false)) });
+      }
+      if (body.op === "missed_items") return json({ me, items: await itemsFor(user, ids(body.ids, 100)) });
     }
 
     if (body.op === "updates") {
