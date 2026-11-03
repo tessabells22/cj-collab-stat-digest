@@ -93,7 +93,7 @@
 
   <div class="how" id="how">
     <b>How it's sorted.</b> Each collab gets points for its deadline (late and due soon score most), for what the message says (urgent wording, a request or a question), for how long nobody has answered, and for the person who tagged you following up. Finished or on-hold collabs score lower. Act now is 65+, Today is 35+. A tag counts as handled once you posted on that collab afterwards or you mark it done.<br>
-    <b>What it reads.</b> Updates and replies on your collabs, plus recent updates across your Monday account. Monday doesn't let apps read its notification inbox, so tags it can't see in an update or reply won't show here. Nothing is changed in Monday.com.
+    <b>What it reads.</b> Updates and replies on your collabs, plus recent updates across your Monday account (read in short steps, so a slow Monday shows up as a note instead of a blank page). Monday doesn't let apps read its notification inbox, so tags it can't see in an update or reply won't show here. Nothing is changed in Monday.com.
   </div>
 </div>
 </main>
@@ -162,7 +162,7 @@ function showGate(msg){if(window.Shell)Shell.setUser(null);$("app").hidden=true;
 $("signout").onclick=async()=>{try{await api("/api/auth/logout")}catch(e){}showGate("")};
 function onData(data,meta){
   raw=data;
-  $("freshText").textContent=(meta.cached?`saved ${savedAgo(meta.at)}, refreshing…`:"updated "+new Date(meta.at).toLocaleTimeString("en-US",{timeZone:tz,hour:"numeric",minute:"2-digit"}))+` · since ${sinceLabel()}`;
+  if(!meta.partial)$("freshText").textContent=(meta.cached?`saved ${savedAgo(meta.at)}, refreshing…`:"updated "+new Date(meta.at).toLocaleTimeString("en-US",{timeZone:tz,hour:"numeric",minute:"2-digit"}))+` · since ${sinceLabel()}`;
   const n=data.notes||{},bits=[];
   if(n.ownFailed)bits.push("Couldn't read updates on your own collabs ("+n.ownFailed+").");
   if(n.feedFailed)bits.push("Couldn't read recent activity outside your own collabs ("+n.feedFailed+"), so tags on other people's collabs may be missing.");
@@ -170,10 +170,61 @@ function onData(data,meta){
   showNote(bits.join(" "),!!(n.ownFailed||n.feedFailed));
   render();
 }
+/* Reads Monday in short steps, each its own request, and re-renders as results arrive:
+   1) which collabs to scan, 2) their updates in chunks of 40, 3) the account-wide updates feed page by page,
+   4) the collab details for every collab someone tagged you on. A step that fails is noted and skipped. */
+const BUDGET_MS=50000,CHUNK=40,FEED_PAGES=5,LOOKBACK_MAX=31*864e5;
+const fatal=e=>e&&["not_signed_in","monday_token","monday_not_connected","rate_limited"].includes(e.code);
+const say=e=>(e&&(e.message||e.code))||"unknown error";
+async function gather(w,fresh,onPartial){
+  const now=Date.now(),since=Math.max(now-LOOKBACK_MAX,Math.min(now,sinceFor(w)));
+  const posts=new Map(),items=new Map(),notes={ownFailed:"",feedFailed:"",itemsFailed:"",truncated:false};
+  let me=null,okSteps=0,lastErr=null;
+  const t0=Date.now(),late=()=>Date.now()-t0>BUDGET_MS;
+  const call=async body=>{const r=await api("/api/monday",body);if(r.me)me=r.me;okSteps++;return r};
+  const add=list=>(list||[]).forEach(p=>{if(!posts.has(p.id))posts.set(p.id,p)});
+  const snapshot=async()=>{
+    /* collab details for every collab with a tag from someone else in the window */
+    const mine=me?String(me.id):"";
+    const need=[...new Set([...posts.values()].filter(p=>p.tagsMe&&p.byId!==mine&&ts(p.at)>=since).map(p=>p.itemId))].filter(id=>!items.has(id)&&!notes.itemsFailed);
+    for(let i=0;i<need.length&&!late();i+=100){
+      try{(await call({op:"missed_items",ids:need.slice(i,i+100)})).items.forEach(it=>items.set(String(it.id),it))}
+      catch(e){if(fatal(e))throw e;notes.itemsFailed="collab details: "+say(e);lastErr=e}
+    }
+    return{me,since,now:Date.now(),posts:[...posts.values()],items:[...items.values()],notes:{...notes}};
+  };
+  const partial=async text=>{if(onPartial){onPartial(await snapshot(),{cached:false,at:Date.now(),partial:true});$("freshText").textContent=text}};
+
+  /* 1 and 2: your own collabs */
+  let ids=[];
+  try{ids=(await call({op:"missed_plan",fresh:!!fresh})).ids||[]}
+  catch(e){if(fatal(e))throw e;notes.ownFailed="the list of your collabs: "+say(e);lastErr=e}
+  const chunks=[];for(let i=0;i<ids.length;i+=CHUNK)chunks.push(ids.slice(i,i+CHUNK));
+  for(let i=0;i<chunks.length;i++){
+    if(late()){notes.truncated=true;break}
+    try{add((await call({op:"missed_own",ids:chunks[i]})).posts)}
+    catch(e){if(fatal(e))throw e;notes.ownFailed=`updates on your collabs (part ${i+1} of ${chunks.length}): `+say(e);lastErr=e;continue}
+    if(i===0||i===chunks.length-1||i%2===1)await partial(`Reading your collabs… ${Math.min(chunks.length,i+1)} of ${chunks.length}`);
+  }
+  /* 3: everyone's updates since then, for tags on collabs you don't own */
+  let useFrom=true;
+  for(let page=1;page<=FEED_PAGES;page++){
+    if(late()){notes.truncated=true;break}
+    try{
+      const r=await call({op:"missed_feed",since,page,useFrom});
+      add(r.posts);useFrom=r.useFrom;
+      if(!r.more)break;
+      if(page===FEED_PAGES)notes.truncated=true;
+    }catch(e){if(fatal(e))throw e;notes.feedFailed=`account updates feed, page ${page}: `+say(e);lastErr=e;break}
+    await partial(`Reading recent activity… page ${page}`);
+  }
+  if(!okSteps)throw lastErr||{code:"server_unavailable",message:"nothing could be read"};
+  return snapshot();
+}
 async function load(fresh){
-  const w=win;
+  const w=win,show=(d,m)=>{if(w===win)onData(d,m)};
   try{
-    const cfg=await swr("catchup:"+w,()=>api("/api/monday",{op:"missed",since:sinceFor(w),fresh:!!fresh}),(d,m)=>{if(w===win)onData(d,m)});
+    const cfg=await swr("catchup:"+w,()=>gather(w,fresh,show),show);
     if(!cfg.signedIn)showGate("");
   }catch(e){
     if(e&&e.code==="not_signed_in"){showGate("Your session ended. Sign in again.");return}
