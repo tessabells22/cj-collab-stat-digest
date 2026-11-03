@@ -11,6 +11,7 @@ const SUB_IDS = ["color_mm26m684", "color_mm265k74", "color_mm266ame", "color_mm
 const COL_IDS = JSON.stringify([...Object.values(COL), ...SUB_IDS]);
 const ITEM_FIELDS = `id name url created_at updated_at column_values(ids:${COL_IDS}){ id text ... on BoardRelationValue { display_value } ... on FormulaValue { display_value } }`;
 const MAX_PAGES = 6;
+export const PRODUCTION_BOARD = BOARD;
 
 // compare_value is a custom scalar in Monday's schema, so the person id is written into the query
 // (it's a numeric Monday user id, checked below) instead of passed as a typed variable.
@@ -104,6 +105,17 @@ export async function updatesMap(ids, user) {
   for (let i = 0; i < batches.length; i += 6) {
     const results = await Promise.all(batches.slice(i, i + 6).map((b) => updatesFor(b, user)));
     results.flat().forEach((x) => { out[String(x.id)] = x.updates || []; });
+  }
+  return out;
+}
+
+/* Items by id with the same columns as the board reads, plus which board they're on. Used for items found
+   through updates, which can be on any board (the column ids only match on the Production board). */
+const ITEMS_Q = `query($ids:[ID!]){ items(ids:$ids, limit:100){ id name url state board{ id name } column_values(ids:${COL_IDS}){ id text ... on BoardRelationValue { display_value } ... on FormulaValue { display_value } } } }`;
+export async function itemsByIds(ids, user) {
+  const out = [];
+  for (let i = 0; i < ids.length; i += 100) {
+    out.push(...((await monday(ITEMS_Q, { ids: ids.slice(i, i + 100) }, user.token)).items || []).filter(Boolean));
   }
   return out;
 }

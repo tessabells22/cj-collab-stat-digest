@@ -46,6 +46,9 @@
     },
     "api/post.js": {
       "maxDuration": 60
+    },
+    "api/monday.js": {
+      "maxDuration": 60
     }
   }
 }

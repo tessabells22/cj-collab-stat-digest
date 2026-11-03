@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>Catch up</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/app.css">
+<link rel="stylesheet" href="/shell.css">
+<style>
+/* Catch up: every @tag you missed on Monday, grouped by collab and sorted by urgency. */
+.wrap{gap:20px}
+.bar2{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.tools2{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sel{font:600 13px var(--f-body);color:var(--text);background:var(--deck);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.abtn{appearance:none;font:600 13px/1 var(--f-body);border-radius:10px;padding:11px 16px;background:transparent;color:var(--text);border:1px solid var(--line);cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+.abtn:hover{border-color:var(--muted)}
+.abtn.primary{background:linear-gradient(135deg,var(--violet),#5B3FE0);border-color:transparent;color:#fff}
+.abtn.small{padding:8px 12px;font-size:12.5px}
+.chk{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);cursor:pointer}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:12px}
+.stat{background:var(--deck);border:1px solid var(--line);border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:6px;position:relative;overflow:hidden;cursor:pointer;text-align:left;font:inherit;color:inherit;appearance:none}
+.stat:hover{border-color:var(--muted)}
+.stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--c)}
+.stat .k{font:600 10.5px/1.2 var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.stat .v{font:600 34px/1 var(--f-body);font-variant-numeric:tabular-nums}
+.tier{display:flex;flex-direction:column;gap:10px;scroll-margin-top:70px}
+.tier h3{margin:0;display:flex;align-items:baseline;gap:10px;font:600 18px/1.3 var(--f-display)}
+.tier h3 i{width:10px;height:10px;border-radius:50%;display:inline-block;align-self:center;background:var(--c)}
+.tier h3 .n{font:500 13px var(--f-mono);color:var(--muted)}
+.tier .hint{margin:-4px 0 0;font-size:13px;color:var(--muted)}
+.mc{background:var(--deck);border:1px solid var(--line);border-radius:16px;padding:16px 20px 16px 24px;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:10px}
+.mc::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c)}
+.mc-h{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+.mc-n a,.mc-n b{font:500 14px/1.35 var(--f-mono);color:var(--text);text-decoration:none;overflow-wrap:anywhere}
+.mc-n a:hover{text-decoration:underline;text-underline-offset:3px}
+.mc-s{display:block;font-size:13px;color:var(--muted);margin-top:3px}
+.mc-s .late{color:var(--danger-text);font-weight:600}.mc-s .today{color:var(--orange);font-weight:600}
+.mc-sc{font:500 12px var(--f-mono);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 10px;white-space:nowrap}
+.rs{display:flex;gap:6px;flex-wrap:wrap}
+.rs span{font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;background:var(--deck-2);border:1px solid var(--line);color:var(--text)}
+.tg{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.tg li{padding:10px 0;border-top:1px solid var(--line);font-size:14px;line-height:1.55;overflow-wrap:anywhere}
+.tg li:first-child{border-top:0}
+.tg li .tgw{font-weight:600}
+.tg li .when{color:var(--muted);font-size:12.5px;margin-left:6px}
+.tg li.res{opacity:.55}
+.tg li .by{display:inline-block;margin-left:8px;font-size:11.5px;font-weight:700;color:var(--lume);border:1px solid color-mix(in srgb,var(--lume) 40%,transparent);border-radius:999px;padding:1px 8px}
+.tg li .undo{appearance:none;background:none;border:0;color:var(--violet);font:600 12px var(--f-body);cursor:pointer;margin-left:8px;padding:0}
+.mc-a{display:flex;gap:8px;flex-wrap:wrap}
+.empty-note{margin:0;color:var(--muted);font-size:14px}
+.how{font-size:13px;color:var(--muted);line-height:1.6}
+.how b{color:var(--text)}
+@media (max-width:760px){.mc-h{flex-direction:column;gap:6px}}
+</style>
+</head>
+<body data-page="catchup" data-crumb="Catch up" data-auth="required">
+<div class="shell" id="app" hidden>
+<aside class="side"></aside>
+<div class="main">
+<header class="topbar"></header>
+<main class="content">
+<div class="wrap">
+  <header class="page-head">
+    <div>
+      <span class="eyebrow">Labs · Catch up</span>
+      <h1>What you <em>missed</em> on Monday</h1>
+      <p class="lede"><span class="fresh" id="fresh"><i></i><span id="freshText">Loading your tags…</span></span><span>Every @tag of you since you were away, grouped by collab and sorted by urgency.</span></p>
+    </div>
+  </header>
+  <div class="note" id="note" hidden></div>
+
+  <div class="bar2">
+    <span class="tools2">
+      <label class="sr" for="win">Look back</label>
+      <select class="sel" id="win"></select>
+      <label class="chk"><input type="checkbox" id="showDone"> Show handled</label>
+    </span>
+    <span class="tools2">
+      <button type="button" class="abtn" id="caughtBtn" title="Next time, 'Since I last caught up' starts from now">Mark all caught up</button>
+      <button type="button" class="abtn" id="copyBtn">Copy as text</button>
+      <button type="button" class="abtn primary" id="refreshBtn">Refresh</button>
+    </span>
+  </div>
+
+  <div class="stats" id="stats"></div>
+  <div id="tiers" style="display:flex;flex-direction:column;gap:26px"></div>
+
+  <div class="how" id="how">
+    <b>How it's sorted.</b> Each collab gets points for its deadline (late and due soon score most), for what the message says (urgent wording, a request or a question), for how long nobody has answered, and for the person who tagged you following up. Finished or on-hold collabs score lower. Act now is 65+, Today is 35+. A tag counts as handled once you posted on that collab afterwards or you mark it done.<br>
+    <b>What it reads.</b> Updates and replies on your collabs, plus recent updates across your Monday account. Monday doesn't let apps read its notification inbox, so tags it can't see in an update or reply won't show here. Nothing is changed in Monday.com.
+  </div>
+</div>
+</main>
+</div>
+</div>
+
+<script src="/shell.js"></script>
+<script src="/collabs.js"></script>
+<script src="/missed.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const WINDOWS=[["caught","Since I last caught up"],["1","Last 24 hours"],["2","Last 2 days"],["3","Last 3 days"],["5","Last 5 days"],["7","Last week"],["14","Last 2 weeks"]];
+const DONE_KEY="cd.catchup.done",CAUGHT_KEY="cd.catchup.caught",WIN_KEY="cd.catchup.win";
+let raw=null,result=null,win=store.get(WIN_KEY)||"3";
+const readDone=()=>{try{return JSON.parse(store.get(DONE_KEY)||"{}")||{}}catch(e){return{}}};
+const writeDone=d=>{const cut=Date.now()-60*864e5;Object.keys(d).forEach(k=>{if(d[k]<cut)delete d[k]});store.set(DONE_KEY,JSON.stringify(d))};
+const caughtAt=()=>+store.get(CAUGHT_KEY)||0;
+if(win==="caught"&&!caughtAt())win="3";
+function sinceFor(w){return w==="caught"?(caughtAt()||Date.now()-3*864e5):Date.now()-(+w)*864e5}
+
+function fillWindows(){
+  $("win").innerHTML=WINDOWS.filter(([k])=>k!=="caught"||caughtAt()).map(([k,l])=>`<option value="${k}"${k===win?" selected":""}>${esc(l)}${k==="caught"?` (${esc(new Date(caughtAt()).toLocaleDateString("en-US",{timeZone:tz,month:"short",day:"numeric"}))})`:""}</option>`).join("");
+}
+const sinceLabel=()=>{const w=WINDOWS.find(x=>x[0]===win);return w?w[1].toLowerCase():""};
+
+function entryHTML(e){
+  const tier=MISSED_TIERS.find(t=>t.key===e.tier);
+  const left=e.left,timing=e.stage&&e.deadline&&!e.finished?`<span class="${left<0?"late":left===0?"today":""}">${esc(timingLabel(left))}</span>`:"";
+  const where=e.stage?`${esc(e.stage)}${e.sub?` · ${esc(e.sub)}`:""}${timing?` · ${timing}`:e.deadline?"":" · No deadline"}`:esc(e.board||"Another board");
+  const tags=(e.tier==="done"?e.tags:e.tags.filter(t=>!t.resolved||$("showDone").checked)).map(t=>`<li class="${t.resolved?"res":""}"><span class="tgw">${esc(t.by||"Someone")}</span><span class="when">${esc(ago(t.at))} · ${esc(fmtWhen(t.at))}</span>${t.resolved?`<span class="by">${esc(t.resolved)}</span>${t.resolved==="Marked done"?`<button type="button" class="undo" data-undo="${esc(t.id)}">Undo</button>`:""}`:""}<br>${esc(t.text.length>320?t.text.slice(0,317)+"…":t.text)}</li>`).join("");
+  return`<article class="mc" style="--c:${tier.c}"><div class="mc-h"><div class="mc-n">${e.url?`<a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.name)}</a>`:`<b>${esc(e.name)}</b>`}<span class="mc-s">${where}${e.creator?` · ${esc(e.creator)}`:""}</span></div>${e.tier!=="done"?`<span class="mc-sc" title="Urgency score">${Math.round(e.score)} pts</span>`:""}</div>
+    ${e.reasons.length&&e.tier!=="done"?`<div class="rs">${e.reasons.map(r=>`<span>${esc(r)}</span>`).join("")}</div>`:""}
+    <ul class="tg">${tags}</ul>
+    <div class="mc-a">${e.url?`<a class="abtn small" href="${esc(e.url)}" target="_blank" rel="noopener">Open in Monday</a>`:""}${e.open.length?`<button type="button" class="abtn small" data-done="${esc(e.id)}">Mark done</button>`:""}</div></article>`;
+}
+function render(){
+  if(!raw)return;
+  result=buildMissed(raw,readDone());
+  const showDone=$("showDone").checked,C=result.counts;
+  $("stats").innerHTML=MISSED_TIERS.map(t=>`<button type="button" class="stat" data-tier="${t.key}" style="--c:${t.c}"><span class="k">${esc(t.label)}</span><span class="v">${C[t.key]}</span></button>`).join("");
+  $("stats").querySelectorAll(".stat").forEach(b=>b.onclick=()=>{const k=b.dataset.tier;if(k==="done"&&!$("showDone").checked){$("showDone").checked=true;render()}const el=document.getElementById("tier-"+k);if(el)el.scrollIntoView({behavior:"smooth",block:"start"})});
+  const total=result.entries.length;
+  $("tiers").innerHTML=MISSED_TIERS.filter(t=>t.key!=="done"||showDone).map(t=>{
+    const list=result.entries.filter(e=>e.tier===t.key);
+    return`<section class="tier" id="tier-${t.key}" style="--c:${t.c}"><h3><i></i>${esc(t.label)} <span class="n">${list.length}</span></h3><p class="hint">${esc(t.hint)}</p>${list.length?list.map(entryHTML).join(""):`<p class="empty-note">${t.key==="now"&&!total?"No tags since "+esc(sinceLabel())+". Nothing to catch up on.":"Nothing here."}</p>`}</section>`}).join("");
+  $("tiers").querySelectorAll("[data-done]").forEach(b=>b.onclick=()=>{const e=result.entries.find(x=>x.id===b.dataset.done);if(!e)return;const d=readDone();e.open.forEach(t=>d[t.id]=Date.now());writeDone(d);render()});
+  $("tiers").querySelectorAll("[data-undo]").forEach(b=>b.onclick=()=>{const d=readDone();delete d[b.dataset.undo];writeDone(d);render()});
+}
+
+/* ---------- copy as text ---------- */
+function asText(){
+  const out=[`Catch-up since ${sinceLabel()}: ${result.counts.now} act now, ${result.counts.today} today, ${result.counts.later} when I can`];
+  MISSED_TIERS.filter(t=>t.key!=="done").forEach(t=>{
+    const list=result.entries.filter(e=>e.tier===t.key);if(!list.length)return;
+    out.push("",`${t.label}:`);
+    list.forEach(e=>{const top=e.open[0];out.push(`• ${e.name}: ${e.reasons.join(", ")}${top?`. ${top.by||"Someone"}: ${top.text.length>140?top.text.slice(0,137)+"…":top.text}`:""}`)});
+  });
+  return out.join("\n");
+}
+$("copyBtn").onclick=async e=>{if(!result)return;const b=e.currentTarget;try{await navigator.clipboard.writeText(asText());b.textContent="Copied"}catch(err){b.textContent="Couldn't copy"}setTimeout(()=>b.textContent="Copy as text",1600)};
+
+/* ---------- load ---------- */
+function showNote(t,err){const n=$("note");n.textContent=t;n.className="note"+(err?" err":"");n.hidden=!t}
+function showGate(msg){if(window.Shell)Shell.setUser(null);$("app").hidden=true;$("gate").hidden=false;$("gateErr").textContent=msg||"";$("gateErr").hidden=!msg}
+$("signout").onclick=async()=>{try{await api("/api/auth/logout")}catch(e){}showGate("")};
+function onData(data,meta){
+  raw=data;
+  $("freshText").textContent=(meta.cached?`saved ${savedAgo(meta.at)}, refreshing…`:"updated "+new Date(meta.at).toLocaleTimeString("en-US",{timeZone:tz,hour:"numeric",minute:"2-digit"}))+` · since ${sinceLabel()}`;
+  showNote(data.notes&&data.notes.feedFailed?"Couldn't read recent activity outside your own collabs, so tags on other people's collabs may be missing. Refresh to try again.":"",false);
+  render();
+}
+async function load(fresh){
+  const w=win;
+  try{
+    const cfg=await swr("catchup:"+w,()=>api("/api/monday",{op:"missed",since:sinceFor(w),fresh:!!fresh}),(d,m)=>{if(w===win)onData(d,m)});
+    if(!cfg.signedIn)showGate("");
+  }catch(e){
+    if(e&&e.code==="not_signed_in"){showGate("Your session ended. Sign in again.");return}
+    if(raw){$("freshText").textContent+=" · couldn't refresh";return}
+    $("freshText").textContent="Couldn't load";showNote(e&&e.code==="rate_limited"?"Monday.com is busy. Try again in a minute.":"Couldn't read your tags from Monday.com. Try again in a minute.",true);
+  }
+}
+$("win").onchange=e=>{win=e.target.value;store.set(WIN_KEY,win);raw=null;$("tiers").innerHTML="";$("stats").innerHTML="";$("freshText").textContent="Loading your tags…";load(false)};
+$("showDone").onchange=render;
+$("refreshBtn").onclick=()=>load(true);
+$("caughtBtn").onclick=()=>{store.set(CAUGHT_KEY,String(Date.now()));fillWindows();$("caughtBtn").textContent="Marked. Next time, pick “Since I last caught up”";setTimeout(()=>$("caughtBtn").textContent="Mark all caught up",2600)};
+fillWindows();
+
+/* Labs page: only people on the preview list can open it while it's in development */
+Shell.config.then(cfg=>{
+  if(!cfg.signedIn||cfg.labs)return load(false);
+  document.querySelector(".content .wrap").innerHTML=`<header class="page-head"><div><span class="eyebrow">Labs · in development</span><h1>Catch up is <em>coming soon</em></h1><p class="lede">This page is still being built. <a href="/digest">Back to My collabs</a></p></div></header>`;
+  document.getElementById("app").hidden=false;
+});
+</script>
+</body>
+</html>
