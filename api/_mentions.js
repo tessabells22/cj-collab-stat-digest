@@ -7,10 +7,11 @@ import { monday, AppError } from "./_lib.js";
 import { activeItems, itemsByIds } from "./_collabs.js";
 
 const POST = "id body text_body created_at creator{ id name }";
-const ITEM_UPDATES_Q = `query($ids:[ID!]){ items(ids:$ids, limit:25){ id updates(limit:25){ ${POST} replies{ ${POST} } } } }`;
+const ITEM_UPDATES_Q = `query($ids:[ID!]){ items(ids:$ids, limit:10){ id updates(limit:20){ ${POST} replies{ ${POST} } } } }`;
 const feedQuery = (from) => `query($page:Int!){ updates(limit:100, page:$page${from ? `, from_date:"${from}"` : ""}){ ${POST} item_id replies{ ${POST} } } }`;
-const OWN_ITEMS = 250;     // most recently touched active collabs to scan
-const FEED_PAGES = 12;     // 100 updates a page
+const OWN_ITEMS = 150;     // most recently touched active collabs to scan
+const FEED_PAGES = 6;      // 100 updates a page
+const BUDGET_MS = 40_000;  // stop reading more once this much time has gone, and return what was found
 const MAX_WINDOW_DAYS = 31;
 const MAX_TEXT = 500;
 
@@ -53,24 +54,26 @@ export function flatten(updates, itemId, user) {
   return out;
 }
 
-async function ownPosts(user, fresh) {
+async function ownPosts(user, fresh, started, notes) {
   const items = (await activeItems(user, { fresh })).slice()
     .sort((a, b) => time(b.updated_at) - time(a.updated_at)).slice(0, OWN_ITEMS).map((it) => String(it.id));
   const batches = [];
-  for (let i = 0; i < items.length; i += 25) batches.push(items.slice(i, i + 25));
+  for (let i = 0; i < items.length; i += 10) batches.push(items.slice(i, i + 10));
   const posts = [];
   for (let i = 0; i < batches.length; i += 4) {
+    if (Date.now() - started > BUDGET_MS) { notes.truncated = true; break; }
     const res = await Promise.all(batches.slice(i, i + 4).map((b) => monday(ITEM_UPDATES_Q, { ids: b }, user.token)));
     for (const r of res) for (const it of r.items || []) posts.push(...flatten(it.updates, it.id, user));
   }
   return posts;
 }
 
-async function feedPosts(user, sinceMs) {
+async function feedPosts(user, sinceMs, started, notes) {
   const from = new Date(sinceMs - 864e5).toISOString().slice(0, 10);
   let useFrom = true;
   const posts = [];
   for (let page = 1; page <= FEED_PAGES; page++) {
+    if (Date.now() - started > BUDGET_MS) { notes.truncated = true; break; }
     let list;
     try {
       list = (await monday(feedQuery(useFrom ? from : ""), { page }, user.token)).updates || [];
@@ -96,23 +99,23 @@ export async function missedTags(user, sinceMs, { fresh = false } = {}) {
   const hit = memo.get(key);
   if (!fresh && hit && now - hit.at < 45_000) return hit.value;
 
-  const notes = { feedFailed: false };
+  const notes = { ownFailed: "", feedFailed: "", truncated: false };
+  const fatal = (e) => e instanceof AppError && ["monday_token", "monday_not_connected", "rate_limited"].includes(e.code);
+  const label = (what, e) => `${what}: ${e && e.message ? e.message : e}`;
+  const t0 = Date.now();
   const [own, feed] = await Promise.all([
-    ownPosts(user, fresh),
-    feedPosts(user, sinceMs).catch((e) => {
-      if (e instanceof AppError && ["monday_token", "monday_not_connected", "rate_limited"].includes(e.code)) throw e;
-      console.warn("account updates feed failed:", e.message);
-      notes.feedFailed = true;
-      return [];
-    }),
+    ownPosts(user, fresh, t0, notes).catch((e) => { if (fatal(e)) throw e; console.warn("catch-up: own collabs failed:", e.message); notes.ownFailed = label("your collabs' updates", e); return null; }),
+    feedPosts(user, sinceMs, t0, notes).catch((e) => { if (fatal(e)) throw e; console.warn("catch-up: updates feed failed:", e.message); notes.feedFailed = label("the account updates feed", e); return null; }),
   ]);
+  console.log(`catch-up: ${Date.now() - t0}ms own=${own ? own.length : "failed"} feed=${feed ? feed.length : "failed"}`);
+  if (!own && !feed) throw new AppError("tool_error", `Monday.com rejected both reads. ${notes.ownFailed}; ${notes.feedFailed}`, 502);
   const byId = new Map();
-  for (const p of [...own, ...feed]) if (p.itemId && !byId.has(p.id)) byId.set(p.id, p);
+  for (const p of [...(own || []), ...(feed || [])]) if (p.itemId && !byId.has(p.id)) byId.set(p.id, p);
   const all = [...byId.values()];
 
   const relevant = new Set(all.filter((p) => p.tagsMe && p.byId !== String(user.id) && time(p.at) >= sinceMs).map((p) => p.itemId));
   const posts = all.filter((p) => relevant.has(p.itemId));
-  const items = relevant.size ? await itemsByIds([...relevant], user) : [];
+  const items = relevant.size ? await itemsByIds([...relevant], user).catch((e) => { throw new AppError(e.code || "tool_error", `collab details: ${e.message}`, e.status || 502); }) : [];
   const value = { since: sinceMs, now, posts, items, notes };
   memo.set(key, { at: now, value });
   if (memo.size > 50) memo.delete(memo.keys().next().value);
